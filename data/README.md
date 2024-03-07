@@ -14,16 +14,27 @@ Some folders also have:
 - derivative `.png`, `.tiff`, or `.pdf` files (based on filenames these are likely
   diagnostic plots), which we ignore here
 
-See below for exceptions and how they were handled.
+Within each subject folder is a six-digit folder whose name is a datestamp in `YYMMDD` format.
+Datestamps of `111111` are files recovered from a past employee's analysis computer,
+and may be useful / necessary to fill in gaps in the dataset (as some files seem to have been lost during a server migration).
+
+## Participant codes
+
+Participants in the `1xx` range are "low SES"; `2xx` are "high SES", and `3xx` are "mid SES".
+`9xx` are pilots that should not be analyzed.
+Participants with an `a` suffix were recorded at ~2 months age; `b` suffix were recorded at ~6 months age.
+
+**TODO** Participants with no suffix are probably 2-month-olds but must be cross-referenced with the appointment log to verify this.
 
 ## Inconsistencies
 
 There are some inconsistent file names / paths in the dataset:
 
 - `/mnt/brainstudio/bad_baby/` is the main data folder. It contains:
-    - 142 folders matching the regex `r"bad_\d{3}[ab]?"`. *So far, those folders are all that was
-      copied to the analysis computer (and from within them, only `*_raw.fif` files were
-      copied).*
+    - 142 folders matching the regex `r"bad_\d{3}_?[ab]?"`.
+      *So far, those folders are all that was copied to the analysis computer
+      (and from within them, only `*_raw.fif` files were copied).*
+      After removing the `bad_9xx` folders (pilot subjects) this leaves 112 folders copied to the analysis machine.
     - **IGNORED** ~~3 pilot folders (2 of the form `{SURNAME}_{FIRSTNAME}` of institute staff, and
       one `pilot_6_month`)~~
     - **IGNORED** ~~1 `.DS_Store` file~~
