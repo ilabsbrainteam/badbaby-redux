@@ -61,9 +61,7 @@ for data_folder in orig_data.rglob("bad_*/*/"):
     elif subj.endswith("b"):
         session = "SixMonth"
     else:
-        raise NotImplementedError(
-            "TODO: create lookup table for subjs with no 'a' or 'b' in their subject ID"
-        )
+        session = "FourPointFiveMonth"
     subj = int(subj[:3])
 
     # find the relevant ERM file. Check current directory first:

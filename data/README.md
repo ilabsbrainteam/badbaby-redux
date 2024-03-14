@@ -23,8 +23,7 @@ and may be useful / necessary to fill in gaps in the dataset (as some files seem
 Participants in the `1xx` range are "low SES"; `2xx` are "high SES", and `3xx` are "mid SES".
 `9xx` are pilots that should not be analyzed.
 Participants with an `a` suffix were recorded at ~2 months age; `b` suffix were recorded at ~6 months age.
-
-**TODO** Participants with no suffix are probably 2-month-olds but must be cross-referenced with the appointment log to verify this.
+Participants with no suffix are 4.5-month-olds.
 
 ## Inconsistencies
 
