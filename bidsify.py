@@ -57,11 +57,11 @@ for data_folder in orig_data.rglob("bad_*/*/"):
     # extract the subject ID
     subj = data_folder.parts[-2].lstrip("bad_")
     if subj.endswith("a"):
-        session = "TwoMonth"
+        session = "a"
     elif subj.endswith("b"):
-        session = "SixMonth"
+        session = "b"
     else:
-        session = "FourPointFiveMonth"
+        session = "c"
     subj = int(subj[:3])
 
     # find the relevant ERM file. Check current directory first:
