@@ -2,6 +2,7 @@
 local-data/
 server-data/
 data/
+data-qc/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

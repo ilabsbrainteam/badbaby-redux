@@ -4,10 +4,10 @@ from pathlib import Path
 
 import pandas as pd
 
-outdir = Path("data-qc")  # where summary files will be written
+outdir = Path(".")  # where summary files will be written
 
 # where to look for the data
-root = Path("local-data").resolve()
+root = Path("..").resolve() / "local-data"
 subj_dirs = sorted(root.glob("bad*"))
 subj_ids = [x.name.lstrip("bad_") for x in subj_dirs]
 # what kinds of data files do we expect?
