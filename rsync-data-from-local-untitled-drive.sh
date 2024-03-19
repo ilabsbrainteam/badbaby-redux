@@ -27,3 +27,6 @@ rsync -rtvzm --partial --progress \
 
 # fix the bad folder name
 mv ./$DESTDIR/bad_208a/151007/ ./$DESTDIR/bad_208a/raw_fif/
+
+# copy over to "data" as hardlinks
+cp -al $DESTDIR/ data/

@@ -25,3 +25,14 @@ rsync -rtvzm --partial --progress \
 
 # there are also no trans files:
 # find /mnt/brainstudio/bad_baby -type f -name '*trans.fif'
+
+# fix the bad folder name
+mv ./$DESTDIR/bad_208_a/ ./$DESTDIR/bad_208a/
+
+# remove redundant data (232a inside 222a; 232a data exists in own folder)
+rm -r ./$DESTDIR/bad_222a/bad_232a/
+
+# remove a "perhaps duplicate" folder, but first copy any files missing from the non-duplicate folder
+# (files with same names were first confirmed to have identical file sizes)
+mv -n ./$DESTDIR/bad_104/151009perhapsduplicate/* ./$DESTDIR/bad_104/151009/
+rm -r ./$DESTDIR/bad_104/151009perhapsduplicate/
