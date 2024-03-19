@@ -1,5 +1,8 @@
 #!/bin/sh
 
+export DESTDIR=local-data
+mkdir -p $DESTDIR
+
 # --include='/bad_*a/'          keep all bad_NNNa folders
 # --include='/bad_*b/'          keep all bad_NNNb folders
 # --exclude='/*/'               skip all other root-level folders (plot*, .fseventsd, etc)
@@ -20,7 +23,7 @@ rsync -rtvzm --partial --progress \
     --include='bad*_raw.fif' \
     --include='bad*_prebad.txt' \
     --exclude='*' \
-    /media/mdclarke/Untitled/ ./local-data/
+    /media/mdclarke/Untitled/ ./$DESTDIR
 
 # fix the bad folder name
-mv ./local-data/bad_208a/151007/ ./local-data/bad_208a/raw_fif/
+mv ./$DESTDIR/bad_208a/151007/ ./$DESTDIR/bad_208a/raw_fif/

@@ -1,5 +1,8 @@
 #!/bin/sh
 
+export DESTDIR=server-data
+mkdir -p $DESTDIR
+
 # --exclude='/bad_baby/'     avoid redundant root-level folder containing partial duplicate of dataset
 # --include='/bad_*/'        keep all other bad_* folders
 # --exclude='/*/'            skip all other root-level folders (pilot*, eric*, otso*)
@@ -14,7 +17,7 @@ rsync -rtvzm --partial --progress \
     --include='*/' \
     --include='bad*_raw.fif' \
     --exclude='*' \
-    /mnt/brainstudio/bad_baby/ ./server-data/
+    /mnt/brainstudio/bad_baby/ ./$DESTDIR/
 
 
 # this tells us that there aren't any prebad .txt files (only shows a few PNG, TIFF, PDF):
