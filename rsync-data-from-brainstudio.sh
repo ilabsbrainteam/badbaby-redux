@@ -14,7 +14,7 @@ rsync -rtvzm --partial --progress \
     --include='*/' \
     --include='bad*_raw.fif' \
     --exclude='*' \
-    /mnt/brainstudio/bad_baby/ ./data/
+    /mnt/brainstudio/bad_baby/ ./server-data/
 
 
 # this tells us that there aren't any prebad .txt files (only shows a few PNG, TIFF, PDF):
