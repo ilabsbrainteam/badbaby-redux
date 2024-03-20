@@ -1,6 +1,7 @@
 import argparse
 import re
 from collections import defaultdict
+from functools import partial
 from pathlib import Path
 
 import pandas as pd
@@ -57,24 +58,33 @@ missing_erm = result.index[~result["erm"]].to_series().reset_index(drop=True)
 missing_erm.to_csv(outdir / f"{which_data}-missing-erm.csv", index=False, header=False)
 
 # split subj and session identifiers
-result["subj"] = result.index.str.slice(0, -1).astype(int)
-result["session"] = result.index.str.slice(-1)
+result["subj"] = result.index.str.slice(0, 3).astype(int)
+session = result.index.str.slice(3)  # may be "" for some subj-sessions
+# fill in session "c" for missing session IDs (timepoints not strictly at 2mo or 6mo)
+result["session"] = session.where(cond=session.astype(bool), other="c")
 result.reset_index(drop=True, inplace=True)
 # save dataframe to disk now, while data is still in "raw" (unaggregated) form
 result.to_csv(outdir / f"files-in-{which_data}.csv")
 
-# remap the boolean column values to session codes "a" or "b"
-for column in ("prebad", "mmn", "am", "ids", "erm"):
-    result[column] = result["session"].where(result[column], other="")
+# remap the boolean column values to session codes "a" or "b" or "c"
+columns = ["prebad", "mmn", "am", "ids", "erm"]
+for column in columns:
+    result[column] = result["session"].where(cond=result[column], other="")
 # aggregate to show which subjs/conds have data from both sessions
 result = result.groupby("subj").agg("sum")
+# ensure sessions are recorded as "abc" (not e.g. "cab")
+columns.append("session")
+result[columns] = result[columns].map(lambda x: "".join(sorted(x)))
+
+# check which subjs have both sessions a & b
+both = result.map(partial(str.startswith, "ab"))
 
 total1 = f"Total subjects: {result.shape[0]}"
-total2 = f"Subjects with both sessions: {(result["session"] == "ab").sum()}"
+total2 = f"Subjects with *some* data from both sessions: {both['session'].sum()}"
 title1 = "Subjects with complete data (sessions a & b), by condition:"
-table1 = (result == "ab").sum().drop("session").to_frame().T.to_string(index=False)
+table1 = both.drop(columns="session").sum().to_frame().T.to_string(index=False)
 title2 = ("Subjects with complete data for all conditions: "
-          f"{(result == "ab").all(axis="columns").sum()}")
+          f"{both.all(axis="columns").sum()}")
 
 line = "-" * max(map(len, (total1, total2, title1, title2, table1.split("\n")[0])))
 
