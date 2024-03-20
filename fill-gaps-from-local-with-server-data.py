@@ -21,6 +21,7 @@ known_bads = {
 
 known_bads = (
     "bad_311a_mmn_bad_raw.fif",  # extra "bad" in fname, non "bad" exists in same dir
+    "bad_129a_raw.fif",  # missing "mmn" in fname, already have correctly-named file of same size
 )
 
 dry_run = False
