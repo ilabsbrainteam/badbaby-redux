@@ -23,6 +23,8 @@ known_bads = (
     "bad_311a_mmn_bad_raw.fif",  # extra "bad" in fname, non "bad" exists in same dir
 )
 
+dry_run = False
+
 for _dir in subj_dirs:
     subj_id = _dir.name
     for second_pass in (False, True):
@@ -38,14 +40,14 @@ for _dir in subj_dirs:
                 # skip files we know we don't want
                 if _fname.name in known_bads:
                     continue
-                # check that the filename matches the folder
-                fname_dirname_mismatch = not _fname.name.startswith(subj_id)
+                # construct the target (destination to copy to)
                 target = outdir / subj_id / "raw_fif" / _fname.name
-                if fname_dirname_mismatch:
-                    # If target already exists, don't care about source name mismatch
+                # check that the filename matches the folder
+                if not _fname.name.startswith(subj_id):
+                    # If target already exists, we don't care about source name mismatch
                     if target.is_file():
                         continue
-
+                    # get the subject ID from the filename
                     _fname_parts = _fname.name.rsplit("_", maxsplit=2)
                     subj_id_in_fname = _fname_parts[0]
                     # don't try to rename the file from the folder, if the subj_id in
@@ -53,11 +55,16 @@ for _dir in subj_dirs:
                     if (outdir / subj_id_in_fname).exists():
                         print(f"folder/filename mismatch ({_fname})")
                         continue
+                    # rewrite filename to have subject ID from the containing folder,
+                    # and update the target accordingly
                     _fname_parts[0] = subj_id
                     new_fname = "_".join(_fname_parts)
-                    print(f"renaming {_fname} to {new_fname}")
+                    if dry_run:
+                        print(f"renaming {_fname} to {new_fname} and updating target")
+                    else:
+                        _fname = _fname.rename(_fname.parent / new_fname)
                     target = target.parent / new_fname
-                    # _fname = _fname.rename(_fname.parent / new_fname)
+                # filename/foldername mismatches handled. Check if the target exists:
                 if target.is_file():
                     # if source & target are same size: assume identical, nothing to do
                     if _fname.stat().st_size == target.stat().st_size:
@@ -66,7 +73,9 @@ for _dir in subj_dirs:
                         # TODO: unclear what action to take here. Manual resolution?
                         print(f"target exists, size mismatch ({_fname.name})")
                 else:
-                    # target not present, so hardlink the file
-                    print("cp", "-l", str(_fname), str(target))
-                    # run("mkdir", "-p", str(target.parent))
-                    # run("cp", "-l", str(_fname), str(target))
+                    # target not present, so hardlink the file (`-n` prevents overwrite)
+                    if dry_run:
+                        print(f"copying  {_fname} to {target}")
+                    else:
+                        run(["mkdir", "-p", str(target.parent)])
+                        run(["cp", "-ln", str(_fname), str(target)])
