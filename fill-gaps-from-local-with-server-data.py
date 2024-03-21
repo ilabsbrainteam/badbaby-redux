@@ -1,4 +1,3 @@
-import re
 from pathlib import Path
 from subprocess import run
 
@@ -6,18 +5,6 @@ indir = Path("server-data")
 outdir = Path("data")
 
 subj_dirs = sorted(indir.glob("bad*"))
-
-# mapping from bad filenames to good filenames
-known_bads = {
-    # "bad_233b_am_raw.fif": "bad_233a_am_raw.fif",
-    # "bad_233_mmn_raw.fif": "bad_233a_mmn_raw.fif",
-    # "bad_233_ids_raw.fif": "bad_233a_ids_raw.fif",
-    # "bad_bay_304a_erm_raw.fif": "bad_304a_erm_raw.fif",
-    # "bad_ids_raw.fif": "bad_309b_ids_raw.fif",
-    # "bad_baby_311a_mmn_raw.fif": "bad_311a_mmn_raw.fif",
-    "bad_311a_mmn_bad_raw.fif": "bad_311a_mmn_raw.fif",  # has extra "bad" in fname,
-    # "bad_baby_317a_erm_raw.fif": "bad_317a_erm_raw.fif",
-}
 
 known_bads = (
     "bad_311a_mmn_bad_raw.fif",  # extra "bad" in fname, non "bad" exists in same dir
