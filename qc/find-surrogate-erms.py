@@ -1,7 +1,6 @@
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
-from subprocess import run
 
 import numpy as np
 
@@ -39,6 +38,8 @@ for _dir in subj_dirs:
                 available_erms[scan_date].append(_fname)
 
 
+missing_erm_dates = list()
+
 # second pass: look for date matches for sessions missing ERMs
 for subj_id in missing_erms:
     if not (ermsource / subj_id).exists():
@@ -57,3 +58,9 @@ for subj_id in missing_erms:
             offset = diffs[idx]
             nearest = available_erms[np.array(list(available_erms))[idx]]
             print(f"no same-day surrogate ERM for {subj_id}; nearest is {offset.days} days ({'/'.join(nearest[0].parts[-2:])})")
+            missing_erm_dates.append(target_date)
+
+missing_erm_dates = list(map(str, sorted(missing_erm_dates)))
+with open("missing_erm_dates.txt", "w") as fid:
+    for _date in missing_erm_dates:
+        fid.write(f"{_date}\n")
