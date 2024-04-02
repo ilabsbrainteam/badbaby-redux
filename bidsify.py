@@ -3,11 +3,13 @@
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
+import yaml
 
 import mne
-
+import pandas as pd
 from mne_bids import (
     BIDSPath,
+    print_dir_tree,
     write_meg_calibration,
     write_meg_crosstalk,
     write_raw_bids,
@@ -26,10 +28,18 @@ def _get_date_from_dir_path(dir_path: Path) -> date:
 
 # path stuff
 root = Path().resolve()
-orig_data = root / "orig_data"
-bids_root = root / "data"
+orig_data = root / "data"
+bids_root = root / "bids-data"
 
 bids_path = BIDSPath(root=bids_root, datatype="meg", suffix="meg", extension=".fif")
+
+# surrogate ERMs (same recording date)
+erm_df = pd.read_csv("qc/surrogate-erms.csv", comment="#")
+erm_map = {need: have for _, (have, need) in erm_df.iterrows()}
+
+# bad/corrupt files
+with open("qc/bad-files.yaml", "r") as fid:
+    bad_files = yaml.load(fid, Loader=yaml.SafeLoader)
 
 # tasks
 tasks = dict(
@@ -38,59 +48,49 @@ tasks = dict(
     mmn="SyllableMismatchNegativity",
 )
 
-# container for ERMs. Not all subfolders have an ERM, so this lets us pick a fallback
-# ERM recording that occurred on the same day when one is missing for a given subject.
-erms = defaultdict(list)
-# first loop: find ERM files
-# TODO: may not need this first loop (and associated code later) if we work from the
-# previous local copy of the data (which had already identified missing/surrogate ERMs)
-for data_folder in orig_data.rglob("bad_*/*/"):
-    # extract date code from the sub-folder name
-    ymd = _get_date_from_dir_path(data_folder)
-    # find the empty room files
-    erm_files = list(data_folder.glob("*_erm_raw.fif"))
-    if len(erm_files):
-        erms[ymd.isoformat()].append(erm_files)
+read_raw_kw = dict(allow_maxshield=True, preload=False)
 
-# second loop: classify raw files by "task" from the filenames
-for data_folder in orig_data.rglob("bad_*/*/"):
+# classify raw files by "task" from the filenames
+for data_folder in orig_data.rglob("bad_*/raw_fif/"):
     # extract the subject ID
-    subj = data_folder.parts[-2].lstrip("bad_")
+    full_subj = data_folder.parts[-2]
+    subj = full_subj.lstrip("bad_")
     if subj.endswith("a"):
         session = "a"
     elif subj.endswith("b"):
         session = "b"
     else:
         session = "c"
-    subj = int(subj[:3])
+    # BIDS requires subj to be a string, but cast to int as a failsafe first
+    subj = str(int(subj[:3]))
 
-    # find the relevant ERM file. Check current directory first:
+    # find the ERM file
     erm_files = list(data_folder.glob("*_erm_raw.fif"))
     if len(erm_files):
         assert len(erm_files) == 1  # there shouldn't ever be 2 ERMs for the same run
-        erm = erm_files[0]
+        erm = mne.io.read_raw_fif(erm_files[0], **read_raw_kw)
+    elif full_subj in erm_map:
+        surrogate = erm_map[full_subj]
+        erm_file = orig_data / surrogate / "raw_fif" / f"{surrogate}_erm_raw.fif"
+        erm = mne.io.read_raw_fif(erm_file, **read_raw_kw)
     else:
-        key = _get_date_from_dir_path(data_folder).isoformat()
-        try:
-            erm = erm_files[key][0]
-            # TODO ↑↑↑ if multiple from that day, ideally would pick one closest in
-            # time. That would probably require reading the info from the raw and the
-            # ERMs to compare acquisition timestamps.
-        except KeyError as err:
-            raise RuntimeError(
-                f"No ERM file found on {key} for subject {subj}"
-            ) from err
+        print(f"No ERM file found for subject {subj}")
+        erm = None
 
     # classify the raw files by task, and write them to the BIDS folder
     for raw_file in data_folder.iterdir():
+        if raw_file.name in bad_files:
+            continue
         for task_code, task_name in tasks.items():
             if task_code in raw_file.name:
                 # load the data, then re-write it in the BIDS folder tree
-                raw = mne.io.read_raw_fif(raw_file, allow_maxshield=True, preload=False)
-                bids_path.update(task=task_name, session=session)
+                raw = mne.io.read_raw_fif(raw_file, **read_raw_kw)
+                bids_path.update(task=task_name, session=session, subject=subj)
                 write_raw_bids(
                     raw=raw,
                     bids_path=bids_path,
-                    subject=subj,
                     empty_room=erm,
+                    overwrite=True,
                 )
+
+print_dir_tree(bids_root)

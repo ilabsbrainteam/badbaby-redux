@@ -1,0 +1,5 @@
+[
+    bad_316b_am_raw.fif,  # ValueError: Number of channels is not defined
+    bad_202_ids_raw.fif,  # ValueError: No raw data in bad_202_ids_raw.fif
+    bad_128a_ids_raw.fif,  # ValueError: No raw data in bad_128a_ids_raw.fif
+]
