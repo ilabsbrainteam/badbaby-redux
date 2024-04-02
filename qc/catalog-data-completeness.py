@@ -82,11 +82,11 @@ both = result.map(partial(str.startswith, "ab"))
 total1 = f"Total subjects: {result.shape[0]}"
 total2 = f"Subjects with *some* data from both sessions: {both['session'].sum()}"
 title1 = "Subjects with complete data (sessions a & b), by condition:"
-table1 = both.drop(columns="session").sum().to_frame().T.to_string(index=False)
-title2 = ("Subjects with complete data for all conditions: "
-          f"{both.all(axis="columns").sum()}")
+tmp_df = both.drop(columns="session").sum().to_frame().T
+tmp_df["all_conds"] = both.all(axis="columns").sum()
+table1 = tmp_df.to_string(index=False)
 
-line = "-" * max(map(len, (total1, total2, title1, title2, table1.split("\n")[0])))
+line = "-" * max(map(len, (total1, total2, title1, table1.split("\n")[0])))
 
 print(line)
 print(total1)
@@ -95,6 +95,4 @@ print(line)
 print(title1)
 print(line)
 print(table1)
-print(line)
-print(title2)
 print(line)
