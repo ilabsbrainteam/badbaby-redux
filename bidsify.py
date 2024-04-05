@@ -3,6 +3,7 @@
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
+from warnings import filterwarnings
 import yaml
 
 import mne
@@ -25,6 +26,15 @@ def _get_date_from_dir_path(dir_path: Path) -> date:
         day=int(date_code[4:]),
     )
 
+
+# suppress messages about IAS / MaxShield
+mne.set_log_level("WARNING")
+filterwarnings(
+    action="ignore",
+    message="This file contains raw Internal Active Shielding data",
+    category=RuntimeWarning,
+    module="mne"
+)
 
 # path stuff
 root = Path().resolve()
@@ -90,7 +100,7 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                     raw=raw,
                     bids_path=bids_path,
                     empty_room=erm,
-                    overwrite=True,
+                    overwrite=True,  # TODO if 2 ERMs on one day, this may clobber?
                 )
 
 print_dir_tree(bids_root)
