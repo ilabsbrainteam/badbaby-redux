@@ -76,16 +76,21 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
 
     # find the ERM file
     erm_files = list(data_folder.glob("*_erm_raw.fif"))
+    this_erm_file = None
     if len(erm_files):
         assert len(erm_files) == 1  # there shouldn't ever be 2 ERMs for the same run
-        erm = mne.io.read_raw_fif(erm_files[0], **read_raw_kw)
+        this_erm_file = erm_files[0]
     elif full_subj in erm_map:
         surrogate = erm_map[full_subj]
-        erm_file = orig_data / surrogate / "raw_fif" / f"{surrogate}_erm_raw.fif"
-        erm = mne.io.read_raw_fif(erm_file, **read_raw_kw)
-    else:
+        this_erm_file = orig_data / surrogate / "raw_fif" / f"{surrogate}_erm_raw.fif"
+    if this_erm_file is None:
         print(f"No ERM file found for subject {subj}")
         erm = None
+    elif this_erm_file.name in bad_files:
+        print(f"ERM file found for subject {subj}, but the file is corrupted")
+        erm = None
+    else:
+        erm = mne.io.read_raw_fif(this_erm_file, **read_raw_kw)
 
     # classify the raw files by task, and write them to the BIDS folder
     for raw_file in data_folder.iterdir():

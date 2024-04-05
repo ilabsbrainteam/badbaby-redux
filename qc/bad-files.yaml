@@ -4,4 +4,5 @@
     bad_208_ids_raw.fif,  # ValueError: No raw data in bad_208_ids_raw.fif
     bad_218a_am_raw.fif,  # ValueError: No raw data in bad_218a_am_raw.fif
     bad_128a_ids_raw.fif,  # ValueError: No raw data in bad_128a_ids_raw.fif
+    bad_317a_erm_raw.fif,  # ValueError: No raw data in bad_317a_erm_raw.fif
 ]
