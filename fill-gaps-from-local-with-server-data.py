@@ -7,9 +7,6 @@ outdir = Path("data")
 subj_dirs = sorted(indir.glob("bad*"))
 
 known_bads = (
-    "bad_311a_mmn_bad_raw.fif",  # extra "bad" in fname, non "bad" exists in same dir
-    "bad_129a_raw.fif",  # missing "mmn" in fname, already have correctly-named file of same size
-    "bad_208_mmn_raw.fif",  # doesn't match folder name (208a); already have correctly-named file of same size
 )
 known_corrupt = (
     indir / "bad_316b" / "160701" / "bad_316b_am_raw.fif",
