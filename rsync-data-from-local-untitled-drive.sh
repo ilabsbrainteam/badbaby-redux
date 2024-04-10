@@ -54,13 +54,13 @@ pushd /media/mdclarke/Untitled/bad_316b/raw_fif/
 cp bad_316b_erm.fif $DESTDIR/bad_316b/bad_316b_erm_raw.fif
 popd
 
-# these will need further action to decide if they're usable
+# these two we know that `raw.fif` is corrupted and `raw2.fif` is good
 pushd /media/mdclarke/Untitled/bad_128a/raw_fif/
-cp bad_128a_ids_raw2.fif $DESTDIR/bad_128a/raw_fif/
+cp bad_128a_ids_raw2.fif $DESTDIR/bad_128a/raw_fif/bad_128a_ids_raw.fif
 popd
 
 pushd /media/mdclarke/Untitled/bad_208a/151007/
-cp bad_208_ids_raw2.fif $DESTDIR/bad_208/raw_fif/
+cp bad_208_ids_raw2.fif $DESTDIR/bad_208/raw_fif/bad_208_ids_raw.fif
 popd
 
 # copy over to "data" as hardlinks

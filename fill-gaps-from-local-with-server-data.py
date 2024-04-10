@@ -11,6 +11,11 @@ known_bads = (
     "bad_129a_raw.fif",  # missing "mmn" in fname, already have correctly-named file of same size
     "bad_208_mmn_raw.fif",  # doesn't match folder name (208a); already have correctly-named file of same size
 )
+known_corrupt = (
+    indir / "bad_316b" / "160701" / "bad_316b_am_raw.fif",
+    indir / "bad_226b" / "160525" / "bad_226b_am_raw.fif",
+    indir / "bad_218a" / "151202" / "bad_218a_am_raw.fif",
+)
 
 dry_run = False
 
@@ -27,7 +32,7 @@ for _dir in subj_dirs:
                 continue
             for _fname in _subdir.iterdir():
                 # skip files we know we don't want
-                if _fname.name in known_bads:
+                if _fname.name in known_bads or _fname in known_corrupt:
                     continue
                 # construct the target (destination to copy to)
                 target = outdir / subj_id / "raw_fif" / _fname.name
