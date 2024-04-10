@@ -3,6 +3,7 @@ bids-data/
 local-data/
 server-data/
 data/
+expyfun-logs/
 qc/
 
 # Byte-compiled / optimized / DLL files
