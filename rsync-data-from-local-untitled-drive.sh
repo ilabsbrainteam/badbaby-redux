@@ -64,7 +64,7 @@ pushd $DESTDIR/bad_128a/raw_fif/
 mv bad_128a_ids_raw2.fif bad_128a_ids_raw.fif
 popd
 
-pushd $DESTDIR/bad_208a/raw_fif/
+pushd $DESTDIR/bad_208/raw_fif/
 mv bad_208_ids_raw2.fif bad_208_ids_raw.fif
 popd
 
