@@ -57,12 +57,16 @@ for _dir in subj_dirs:
                     target = target.parent / new_fname
                 # filename/foldername mismatches handled. Check if the target exists:
                 if target.is_file():
+                    source_size = _fname.stat().st_size
+                    target_size = target.stat().st_size
                     # if source & target are same size: assume identical, nothing to do
-                    if _fname.stat().st_size == target.stat().st_size:
+                    if source_size == target_size:
                         continue
                     else:
                         # TODO: unclear what action to take here. Manual resolution?
-                        print(f"target exists, size mismatch ({_fname.name})")
+                        print(
+                            f"target exists, size mismatch ({_fname.name}): "
+                            f"local is {target_size}, server is {source_size}")
                 else:
                     # target not present, so hardlink the file (`-n` prevents overwrite)
                     if dry_run:
