@@ -1,31 +1,13 @@
 from pathlib import Path
-from subprocess import run
+import yaml
 
-
-def hardlink(source, target, dry_run=True):
-    """Create target dirs, then hardlink."""
-    target.parent.mkdir(parents=True, exist_ok=True)
-    cmd = ["cp", "-ln", "--preserve=all", str(source), str(target)]
-    if not dry_run:
-        run(cmd)
-
-
-dry_run = False
 
 indir = Path("local-data").resolve()
 outdir = Path("data").resolve()
 
-# first link all prebad.txt files
-prebads = indir.rglob("bad_*_prebad.txt")
-for source in prebads:
-    target = outdir / source.relative_to(indir)
-    hardlink(source, target, dry_run)
-
-# now handle FIF files
+# create initial source → target mapping
 infiles = indir.rglob("*.fif")
-mapping = {
-    source: outdir / source.relative_to(indir) for source in infiles
-}
+mapping = {source: outdir / source.relative_to(indir) for source in infiles}
 
 # FIX BAD FOLDER NAME: bad_208a/151007 → bad_208/raw_fif
 #     The datestamp 151007 indicates that this is actually bad_208 (not bad_208a),
@@ -46,7 +28,9 @@ mapping.update(fix_208a_208)
 #     time run "a" files were saved.
 source = indir / "bad_208b" / "raw_fif" / "bad_208a_erm_raw.fif"
 fix_208a_208b = {
-    source: outdir / source.parent.relative_to(indir) / source.name.replace("208a", "208b")
+    source: outdir
+    / source.parent.relative_to(indir)
+    / source.name.replace("208a", "208b")
 }
 
 # FIX BAD FILENAMES: *_erm.fif → *_erm_raw.fif
@@ -61,7 +45,9 @@ corrupted_files = (
     indir / "bad_208a" / "151007" / "bad_208_ids_raw.fif",
 )
 fix_corrupted = {
-    bad_source.parent / bad_source.name.replace("raw.fif", "raw2.fif"): mapping.pop(bad_source)
+    bad_source.parent / bad_source.name.replace("raw.fif", "raw2.fif"): mapping.pop(
+        bad_source
+    )
     for bad_source in corrupted_files
 }
 
@@ -73,11 +59,9 @@ _ = mapping.pop(key)
 
 fixes = (fix_208a_208b, fix_erm, fix_corrupted)
 for fix in fixes:
-    if dry_run:
-        for _src, _trg in fix.items():
-            print(f"{_src.relative_to(indir.parent)} → {_trg.relative_to(outdir.parent)}\n")
-    else:
-        mapping.update(fix)
+    mapping.update(fix)
 
-for source, target in mapping.items():
-    hardlink(source, target, dry_run)
+# write to file
+# TODO: convert Path objs to strings before dumping
+with open("local.yaml", "w") as fid:
+    yaml.dump(mapping, fid)
