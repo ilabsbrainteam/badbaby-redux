@@ -7,11 +7,11 @@ from pathlib import Path
 import pandas as pd
 
 parser = argparse.ArgumentParser(prog="",)
-parser.add_argument("datadir", choices=("munged", "server", "local"))
+parser.add_argument("datadir", choices=("combined", "server", "local"))
 args = parser.parse_args()
 
 # where to look for the data
-paths = dict(munged="data", server="server-data", local="local-data")
+paths = dict(combined="data", server="server-data", local="local-data")
 which_data = paths[args.datadir]
 root = Path("..").resolve() / which_data
 
@@ -27,12 +27,13 @@ expected_files = {
     "ids_raw.fif": [],
     "erm_raw.fif": [],
 }
-pattern = f"bad.*({'|'.join(expected_files)})$"
-
+pattern = rf"bad_\d{{3}}[ab]?_.*({'|'.join(expected_files)})$"
 # loop over subject folders, and tally which of the expected file types we find
 for _dir in subj_dirs:
     df_row = defaultdict(lambda: False)
-    for _fname in (_dir / "raw_fif").iterdir():
+    # handle the one bad folder name in local data
+    subdir = "raw_fif" if (_dir / "raw_fif").is_dir() else "151007"
+    for _fname in (_dir / subdir).iterdir():
         for _kind in expected_files:
             df_row[_kind] |= _fname.name.endswith(_kind)
         if not re.match(pattern, _fname.name):

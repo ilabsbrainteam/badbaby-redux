@@ -56,7 +56,8 @@ for _file in redundant_files:
 for prefix in ("bad_baby_", "bad_bay_", "bad__baby_"):
     mapping.update(
         {
-            source: mapping[source].parent / source.name.replace(prefix, "bad_")
+            source:
+            mapping[source].parent / mapping[source].name.replace(prefix, "bad_")
             for source in indir.rglob(f"{prefix}*.fif")
         }
     )
@@ -64,7 +65,8 @@ for prefix in ("bad_baby_", "bad_bay_", "bad__baby_"):
 # FIX BAD FILENAME PATTERN: *_erm.fif → *_erm_raw.fif
 mapping.update(
     {
-        source: mapping[source].parent / source.name.replace("erm.fif", "erm_raw.fif")
+        source:
+        mapping[source].parent / mapping[source].name.replace("erm.fif", "erm_raw.fif")
         for source in indir.rglob("*_erm.fif")
     }
 )
@@ -74,43 +76,29 @@ mapping.update(
     {
         # 117 → 117b. There is no session 117 without the "a" or "b"; other files in
         # that folder correctly include the "b"
-        indir / "bad_117b" / "160323" / "bad_117_ids_raw.fif": outdir
-        / "bad_117b"
-        / "raw_fif"
-        / "bad_117b_ids_raw.fif",
+        indir / "bad_117b" / "160323" / "bad_117_ids_raw.fif":
+        outdir / "bad_117b" / "raw_fif" / "bad_117b_ids_raw.fif",
         # 143a → 134a. There is no subj 143, so this is clearly a transposition typo.
-        indir / "bad_134a" / "160415" / "bad_143a_ids_raw.fif": outdir
-        / "bad_134a"
-        / "raw_fif"
-        / "bad_134a_ids_raw.fif",
+        indir / "bad_134a" / "160415" / "bad_143a_ids_raw.fif":
+        outdir / "bad_134a" / "raw_fif" / "bad_134a_ids_raw.fif",
         # 208_a → 208a (it's the only file in that folder)
-        indir / "bad_208_a" / "151015" / "bad_208_mmn_raw.fif": outdir
-        / "bad_208a"
-        / "raw_fif"
-        / "bad_208a_mmn_raw.fif",
+        indir / "bad_208_a" / "151015" / "bad_208_mmn_raw.fif":
+        outdir / "bad_208a" / "raw_fif" / "bad_208a_mmn_raw.fif",
         # 208a → 208b.  Folder for 208a already has an ERM of a different file size;
         # assume this is just a typo.
-        indir / "bad_208b" / "160226" / "bad_208a_erm_raw.fif": outdir
-        / "bad_208b"
-        / "raw_fif"
-        / "bad_208b_erm_raw.fif",
+        indir / "bad_208b" / "160226" / "bad_208a_erm_raw.fif":
+        outdir / "bad_208b" / "raw_fif" / "bad_208b_erm_raw.fif",
         # 309b. missing subject ID
-        indir / "bad_309b" / "160523" / "bad_ids_raw.fif": outdir
-        / "bad_309b"
-        / "raw_fif"
-        / "bad_309b_ids_raw.fif",
+        indir / "bad_309b" / "160523" / "bad_ids_raw.fif":
+        outdir / "bad_309b" / "raw_fif" / "bad_309b_ids_raw.fif",
         # 310 → 310a. There is no session 310 without the "a" or "b"; other files in
         # that folder correctly include the "a"
-        indir / "bad_310a" / "160112" / "bad_310_ids_raw.fif": outdir
-        / "bad_310a"
-        / "raw_fif"
-        / "bad_310a_ids_raw.fif",
+        indir / "bad_310a" / "160112" / "bad_310_ids_raw.fif":
+        outdir / "bad_310a" / "raw_fif" / "bad_310a_ids_raw.fif",
         # AVOID CLOBBER (raw.fif → raw2.fif). Prevent file from second MEG session from
         # overwriting earlier run, until we know for sure which one we want (TODO).
-        indir / "bad_209b" / "160225" / "bad_209b_mmn_raw.fif": outdir
-        / "bad_209b"
-        / "raw_fif"
-        / "bad_209b_mmn_raw2.fif",
+        indir / "bad_209b" / "160225" / "bad_209b_mmn_raw.fif":
+        outdir / "bad_209b" / "raw_fif" / "bad_209b_mmn_raw2.fif",
     }
 )
 
@@ -140,11 +128,9 @@ for source, target in mapping.items():
     trg = target.relative_to(outdir).parts
     assert len(src) == 3
     assert len(trg) == 3
-    # assert trg[0] == src[0], (source, target)
     assert trg[1] == "raw_fif"
     assert trg[2].startswith(trg[0])  # foldername matches filename
 
 # write to file
-# TODO: convert Path objs to strings before dumping
-with open("server.yaml", "w") as fid:
-    yaml.dump(mapping, fid)
+with open("files-from-server.yaml", "w") as fid:
+    yaml.dump({str(source): str(target) for source, target in mapping.items()}, fid)

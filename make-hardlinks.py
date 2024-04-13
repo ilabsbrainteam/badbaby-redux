@@ -11,7 +11,7 @@ def hardlink(source, target, dry_run=True):
         run(cmd)
 
 
-dry_run = True
+dry_run = False
 root = Path(".").resolve()
 
 # first link all prebad.txt files (those don't exist on server, only local)
@@ -22,14 +22,16 @@ for source in prebads:
     hardlink(source, target, dry_run)
 
 # read in source → target mappings from the `select-files-from-*.py` scripts
-with open("local.yaml", "r") as fid:
-    local_files = yaml.load(fid, loader=yaml.SafeLoader())
-with open("server.yaml", "r") as fid:
-    server_files = yaml.load(fid, loader=yaml.SafeLoader())
+with open("files-from-local.yaml", "r") as fid:
+    local_files = yaml.load(fid, Loader=yaml.SafeLoader)
+with open("files-from-server.yaml", "r") as fid:
+    server_files = yaml.load(fid, Loader=yaml.SafeLoader)
 mapping = local_files | server_files
 
 # make hardlinks for the FIF files
 for source, target in mapping.items():
+    source = Path(source)
+    target = Path(target)
     # this guard shouldn't be necessary due to -n flag in hardlink command,
     # but let's be extra careful:
     if not target.is_file():
