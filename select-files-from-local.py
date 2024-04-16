@@ -13,6 +13,8 @@ redundant_files = (
     # DUPLICATE. there are 2 ERMs in bad_209b folder, the files are identical, one has
     # wrong subj name (208b), folder for 208b already has an ERM of different file size.
     indir / "bad_209b" / "raw_fif" / "bad_208b_erm_raw.fif",
+    # CORRUPT. larger file with same name in server's `111111` folder.
+    indir / "bad_316b" / "raw_fif" / "bad_316b_am_raw.fif",
 )
 for _file in redundant_files:
     _ = mapping.pop(_file)
