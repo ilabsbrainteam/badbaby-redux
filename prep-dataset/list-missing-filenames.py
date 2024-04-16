@@ -1,8 +1,11 @@
+from pathlib import Path
+
 import pandas as pd
 
-df = pd.read_csv("files-in-data.csv", index_col=0)
+outdir = Path("qc").resolve()
+df = pd.read_csv(outdir / "files-in-data.csv", index_col=0)
 
-with open("missing-files.txt", "w") as fid:
+with open(outdir / "files-missing.txt", "w") as fid:
     for _, row in df.iterrows():
         subj = row["subj"]
         session = row["session"] if row["session"] in ("a", "b") else ""

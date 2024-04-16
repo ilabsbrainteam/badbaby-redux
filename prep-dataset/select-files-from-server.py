@@ -1,8 +1,9 @@
 from pathlib import Path
 import yaml
 
-indir = Path("server-data").resolve()
-outdir = Path("data").resolve()
+root = Path("/storage/badbaby-redux").resolve()
+indir = root / "server-data"
+outdir = root / "data"
 
 # create initial source → target mapping
 infiles = indir.rglob("*.fif")

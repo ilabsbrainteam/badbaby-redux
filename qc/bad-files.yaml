@@ -1,9 +1,0 @@
-[
-    # bad_128a_ids_raw.fif,  # ValueError: No raw data in bad_128a_ids_raw.fif  # use raw2.fif
-    bad_202_ids_raw.fif,  # ValueError: No raw data in bad_202_ids_raw.fif
-    # bad_208_ids_raw.fif,  # ValueError: No raw data in bad_208_ids_raw.fif  # use raw2.fif
-    # bad_218a_am_raw.fif,  # ValueError: No raw data in bad_218a_am_raw.fif  # use file from 111111
-    # bad_226b_am_raw.fif,  # ValueError: Number of channels is not defined  # use file from 111111
-    # bad_316b_am_raw.fif,  # ValueError: Number of channels is not defined  # use file from 111111
-    bad_317a_erm_raw.fif,  # ValueError: No raw data in bad_317a_erm_raw.fif
-]

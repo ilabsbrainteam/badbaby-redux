@@ -1,6 +1,5 @@
 """Create BIDS folder structure for "badbaby" data."""
 
-from collections import defaultdict
 from datetime import date
 from pathlib import Path
 from warnings import filterwarnings
@@ -33,22 +32,23 @@ filterwarnings(
     action="ignore",
     message="This file contains raw Internal Active Shielding data",
     category=RuntimeWarning,
-    module="mne"
+    module="mne",
 )
 
 # path stuff
-root = Path().resolve()
+root = Path("/storage/badbaby-redux").resolve()
 orig_data = root / "data"
 bids_root = root / "bids-data"
+outdir = Path("qc").resolve()
 
 bids_path = BIDSPath(root=bids_root, datatype="meg", suffix="meg", extension=".fif")
 
 # surrogate ERMs (same recording date)
-erm_df = pd.read_csv("qc/surrogate-erms.csv", comment="#")
-erm_map = {need: have for _, (have, need) in erm_df.iterrows()}
+erm_df = pd.read_csv("qc/erm-surrogates.csv", index_col=False)
+erm_map = {need: have for _, (date, need, have) in erm_df.iterrows()}
 
 # bad/corrupt files
-with open("qc/bad-files.yaml", "r") as fid:
+with open("bad-files.yaml", "r") as fid:
     bad_files = yaml.load(fid, Loader=yaml.SafeLoader)
 
 # tasks
@@ -77,17 +77,17 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
     # find the ERM file
     erm_files = list(data_folder.glob("*_erm_raw.fif"))
     this_erm_file = None
-    if len(erm_files):
-        assert len(erm_files) == 1  # there shouldn't ever be 2 ERMs for the same run
+    if len(erm_files) > 1:
+        with open(outdir / "log-of-ERM-issues-BIDS.txt", "a") as fid:
+            fid.write(f"Found {len(erm_files)} ERM files for subj {full_subj}\n")
         this_erm_file = erm_files[0]
-    elif full_subj in erm_map:
-        surrogate = erm_map[full_subj]
-        this_erm_file = orig_data / surrogate / "raw_fif" / f"{surrogate}_erm_raw.fif"
     if this_erm_file is None:
-        print(f"No ERM file found for subject {subj}")
+        with open(outdir / "log-of-ERM-issues-BIDS.txt", "a") as fid:
+            fid.write(f"No ERM file found for subject {subj}\n")
         erm = None
     elif this_erm_file.name in bad_files:
-        print(f"ERM file found for subject {subj}, but the file is corrupted")
+        with open(outdir / "log-of-ERM-issues-BIDS.txt", "a") as fid:
+            fid.write(f"ERM file found for subject {subj}, but the file is corrupted\n")
         erm = None
     else:
         erm = mne.io.read_raw_fif(this_erm_file, **read_raw_kw)

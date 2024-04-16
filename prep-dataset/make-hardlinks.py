@@ -1,4 +1,7 @@
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
+from shutil import copyfileobj
 from subprocess import run
 import yaml
 
@@ -12,7 +15,13 @@ def hardlink(source, target, dry_run=True):
 
 
 dry_run = False
-root = Path(".").resolve()
+root = Path("/storage/badbaby-redux").resolve()
+
+# logging
+outdir = Path("qc").resolve()
+outdir.mkdir(exist_ok=True)
+logfile = StringIO()
+add_to_log = redirect_stdout(logfile)
 
 # first link all prebad.txt files (those don't exist on server, only local)
 indir = root / "local-data"
@@ -38,7 +47,13 @@ for source, target in mapping.items():
         hardlink(source, target, dry_run)
     # don't bother telling me if the filesizes are identical
     elif source.stat().st_size != target.stat().st_size:
-        print(
-            f"FILE SIZE MISMATCH: not linking {source.relative_to(root)} to "
-            f"{target.relative_to(root)}"
-        )
+        with add_to_log:
+            print(
+                f"FILE SIZE MISMATCH: not linking {source.relative_to(root)} to "
+                f"{target.relative_to(root)}"
+            )
+
+with open(outdir / "log-of-hardlinking.txt", "w") as fid:
+    logfile.seek(0)
+    copyfileobj(logfile, fid)
+logfile.close()

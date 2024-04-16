@@ -13,7 +13,7 @@ mkdir -p $DESTDIR
 # --include='bad*_erm.fif'   keep (mis-named) _erm.fif
 # --exclude='*'              skip all other files
 
-rsync -rtvzm --partial --progress --delete --chown drmccloy:badbaby \
+rsync -rtvzm --partial --progress --delete --chown $USER:badbaby \
     --exclude='/bad_baby/' \
     --include='/bad_*/' \
     --exclude='/*/' \

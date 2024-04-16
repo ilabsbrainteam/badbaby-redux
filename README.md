@@ -2,16 +2,21 @@
 
 This repo is for reanalysis of the "Bad Baby" data, using the MNE-BIDS-Pipeline.
 
+
+## Notes on data sources and data munging
+
+- local folder `/media/mdclarke/Untitled` contains badbaby data with `prebad` files defined and many missing emptyroom files tracked down. This is our starting point, rsync'd to `/storage/badbaby-redux/local-data`.
+
+- server folder `/mnt/brainstudio/badbaby/` has lots of anomalies / redundancies. It gets rsync'd to `/storage/badbaby-redux/server-data`.
+
+- file and folder naming anomalies and known-bad-file exclusions are handled by `select-files-from-*.py`
+
+
 ## Data prep
 
-1. `rsync-data-from-local-untitled-drive.sh` (may need `sudo`)
-2. `rsync-data-from-server.sh`
-3. `python select-files-from-local.py`
-4. `python select-files-from-server.py`
-5. `python make-hardlinks.py > qc/log-of-hardlinking.txt`
-6. `cd qc/`
-    - `python catalog-data-completeness.py local > summary-of-local-drive.txt`
-    - `python catalog-data-completeness.py combined > summary-combined-data-sources.txt`
-    - `python find-surrogate-erms.py > log-of-surrogate-erms.txt`
-    - `python link-surrogate-erms.py`
-    - now repeat `python catalog-data-completeness.py combined > summary-after-linking-erms.txt`
+There is a `Makefile` in the `prep-dataset` folder. `make all` will:
+
+1. rsync data from local and remote sources.
+2. sort through the copied file trees, generate a mapping from filenames we want to keep to new file locations (correcting folder- or file-names along the way), and make a hardlink to each "kept" file at the new location.
+3. write summaries of how much data we have for each subject/session.
+4. generate logs / lists of missing or unexpected files.

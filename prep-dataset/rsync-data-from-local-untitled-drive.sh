@@ -16,7 +16,7 @@ mkdir -p $DESTDIR
 # --include='bad*_prebad.txt'   keep prebads
 # --exclude='*'                 skip all other files
 
-rsync -rtvzm --partial --progress --delete --chown drmccloy:badbaby \
+rsync -rtvzm --partial --progress --delete --chown $USER:badbaby \
     --include='/bad_*a/' \
     --include='/bad_*b/' \
     --exclude='/*/' \
