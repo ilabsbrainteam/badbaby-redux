@@ -1,10 +1,13 @@
 # custom stuff:
 bids-data/
+extra-data/
 local-data/
 server-data/
 data/
 expyfun-logs/
-qc/
+anat/
+calibration/
+old-stuff/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
