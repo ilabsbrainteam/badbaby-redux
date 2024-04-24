@@ -44,6 +44,11 @@ outdir = Path("qc").resolve()
 
 bids_path = BIDSPath(root=bids_root, datatype="meg", suffix="meg", extension=".fif")
 
+# init logging (erase old log file)
+erm_log = outdir / "log-of-ERM-issues-BIDS.txt"
+with open(erm_log, "w") as fid:
+    pass
+
 # surrogate ERMs (same recording date)
 erm_df = pd.read_csv("qc/erm-surrogates.csv", index_col=False)
 erm_map = {need: have for _, (date, need, have) in erm_df.iterrows()}
@@ -84,15 +89,15 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
     erm_files = list(data_folder.glob("*_erm_raw.fif"))
     this_erm_file = None
     if len(erm_files) > 1:
-        with open(outdir / "log-of-ERM-issues-BIDS.txt", "a") as fid:
+        with open(erm_log, "a") as fid:
             fid.write(f"Found {len(erm_files)} ERM files for subj {full_subj}\n")
         this_erm_file = erm_files[0]
     if this_erm_file is None:
-        with open(outdir / "log-of-ERM-issues-BIDS.txt", "a") as fid:
+        with open(erm_log, "a") as fid:
             fid.write(f"No ERM file found for subject {subj}\n")
         erm = None
     elif this_erm_file.name in bad_files:
-        with open(outdir / "log-of-ERM-issues-BIDS.txt", "a") as fid:
+        with open(erm_log, "a") as fid:
             fid.write(f"ERM file found for subject {subj}, but the file is corrupted\n")
         erm = None
     else:
