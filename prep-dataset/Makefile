@@ -69,5 +69,5 @@ all: qc/files-missing.txt qc/summary-after-linking-erms.txt qc/files-in-local-da
 	@echo "Regenerated everything. Check:"; \
 	echo "    qc/summary-after-linking-erms.txt"; \
 	echo "    qc/unexpected-files-after-linking-erms.txt"; \
-	echo "    qc/missing-files.txt"; \
+	echo "    qc/files-missing.txt"; \
 	echo "    qc/log-of-hardlinking.txt"

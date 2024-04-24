@@ -120,7 +120,7 @@ if args.datadir == "erm":
 elif args.datadir == "combined":
     out_fname = "of-combined-data.txt"
 else:
-    out_fname = f"of-{which_data}-data.txt"
+    out_fname = f"of-{which_data}.txt"
 
 with open(outdir / f"summary-{out_fname}", "w") as fid:
     logfile.seek(0)
