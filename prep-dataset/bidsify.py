@@ -39,6 +39,7 @@ filterwarnings(
 root = Path("/storage/badbaby-redux").resolve()
 orig_data = root / "data"
 bids_root = root / "bids-data"
+cal_dir = root / "calibration"
 outdir = Path("qc").resolve()
 
 bids_path = BIDSPath(root=bids_root, datatype="meg", suffix="meg", extension=".fif")
@@ -74,6 +75,11 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
     # BIDS requires subj to be a string, but cast to int as a failsafe first
     subj = str(int(subj[:3]))
 
+    # write the fine-cal and crosstalk files (once per subject/session)
+    bids_path.update(session=session, subject=subj)
+    write_meg_calibration(cal_dir / "sss_cal.dat", bids_path=bids_path)
+    write_meg_crosstalk(cal_dir / "ct_sparse.fif", bids_path=bids_path)
+
     # find the ERM file
     erm_files = list(data_folder.glob("*_erm_raw.fif"))
     this_erm_file = None
@@ -100,12 +106,12 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
             if task_code in raw_file.name:
                 # load the data, then re-write it in the BIDS folder tree
                 raw = mne.io.read_raw_fif(raw_file, **read_raw_kw)
-                bids_path.update(task=task_name, session=session, subject=subj)
+                bids_path.update(task=task_name)
                 write_raw_bids(
                     raw=raw,
                     bids_path=bids_path,
                     empty_room=erm,
-                    overwrite=True,  # TODO if 2 ERMs on one day, this may clobber?
+                    overwrite=True,
                 )
 
 print_dir_tree(bids_root)
