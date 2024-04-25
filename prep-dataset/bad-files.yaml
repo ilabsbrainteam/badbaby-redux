@@ -1,5 +1,5 @@
 # this is the "last resort" list: files for which we couldn't find valid
 # replacements or surrogates
 [
-
+  bad_202_ids_raw.fif,  # ValueError: No raw data in bad_202_ids_raw.fif
 ]
