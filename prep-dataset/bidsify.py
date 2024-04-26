@@ -19,6 +19,7 @@ from mne_bids import (
 )
 import pandas as pd
 from pytz import timezone
+from scipy.signal import correlate
 
 # suppress messages about IAS / MaxShield
 mne.set_log_level("WARNING")
@@ -52,6 +53,14 @@ event_offsets = dict(
     mmn=30000,
 )
 
+# exclude list for bad TAB files
+bad_tabs = (
+    "316_2016-07-01 13_38_13.300000.tab",  # 699 events, 165 expyfun events
+    "316_2016-07-01 13_41_48.221000.tab",  # event array has `0` where it should have `4`
+    "231_2016-07-11 12_34_02.159000.tab",  # 5 events, 2 expyfun events
+    "231_2016-07-11 12_21_52.249000.tab",  # 5 events, 2 expyfun events
+)
+
 
 def parse_tab_values(value):
     try:
@@ -71,6 +80,9 @@ def score(events, subj, exp_type, meas_date):
     matched_tabs = dict()
     # find the correct .tab file
     for tab in tabs:
+        # exclude specific bad TAB files
+        if tab.name in bad_tabs:
+            continue
         # make sure date matches in filename
         date = tab.name.split("_")[1].split(" ")[0]
         if date != str(meas_date.date()):
@@ -91,8 +103,7 @@ def score(events, subj, exp_type, meas_date):
             tzinfo=timezone("US/Pacific")
         )
         time_diff = tab_date - meas_date
-        if np.abs(time_diff) > datetime.timedelta(minutes=60):
-            continue
+        # print(time_diff, tab.name)  # TODO REMOVE; FOR DEBUGGING
         # load the .tab file
         df = pd.read_csv(tab, comment="#", sep="\t")
         # convert pandas-unparseable values into something intelligible
@@ -105,9 +116,13 @@ def score(events, subj, exp_type, meas_date):
                 f"{len(matched_tabs)} matching TAB files found for subj {subj} "
                 f"task {tasks[exp_type]}\n"
             )
-    if len(matched_tabs):
-        which = np.argmin(np.abs(list(matched_tabs)))
-        this_tab = matched_tabs[list(matched_tabs)[which]]
+    if not len(matched_tabs):
+        return events, "(no valid/matching TAB file found)"
+    # use the one whose timestamp is closest to meas_date
+    which = np.argmin(np.abs(list(matched_tabs)))
+    key = list(matched_tabs)[which]
+    this_tab = matched_tabs[key]
+    msg = f"({str(np.abs(key)).split('.')[0]} time diff between FIF and TAB)"
     # convert expyfun trial_id to event code
     # this mapping comes from the original experiment run files (`mmn_expyfun.py`)
     trial_id_map = {
@@ -118,17 +133,34 @@ def score(events, subj, exp_type, meas_date):
     expyfun_ids = this_tab["value"].loc[this_tab["event"] == "trial_id"]
     offset = event_offsets[exp_type]
     if exp_type == "mmn":
-        expyfun_ids = expyfun_ids.map(trial_id_map) + offset
+        expyfun_ids = expyfun_ids.map(trial_id_map).to_numpy() + offset
     elif exp_type == "am":
         # all trials had same TTL ID of "2"
         expyfun_ids = np.full_like(expyfun_ids, 2 + offset, dtype=int)
     elif exp_type == "ids":
         # TTL IDs ranged from 0-4
-        expyfun_ids += offset + 1
+        expyfun_ids += offset
+        expyfun_ids = expyfun_ids.to_numpy().astype(int)
     else:
         raise ValueError(f'Unrecognized experiment type "{exp_type}"')
-    assert np.array_equal(events[:, -1], expyfun_ids)
-    return events
+    event_ids = events[:, -1]
+    size_diff = expyfun_ids.size - event_ids.size
+    if size_diff:
+        shift = np.argmax(
+            correlate(event_ids, expyfun_ids, mode="valid", method="direct")
+        )
+        if size_diff > 0:  # expyfun_ids is bigger
+            start = size_diff - shift
+            stop = start + events.shape[0]
+            np.testing.assert_array_equal(event_ids, expyfun_ids[start:stop])
+        else:  # events is bigger
+            start = shift
+            stop = size_diff
+            np.testing.assert_array_equal(event_ids[start:stop], expyfun_ids)
+            return events[start:stop], msg
+    else:
+        np.testing.assert_array_equal(event_ids, expyfun_ids)
+    return events, msg
 
 
 # surrogate ERMs (same recording date)
@@ -171,8 +203,9 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
 
     # write the fine-cal and crosstalk files (once per subject/session)
     bids_path.update(session=session, subject=subj)
-    write_meg_calibration(cal_dir / "sss_cal.dat", bids_path=bids_path)
-    write_meg_crosstalk(cal_dir / "ct_sparse.fif", bids_path=bids_path)
+    # TODO TEMP COMMENT OUT
+    # write_meg_calibration(cal_dir / "sss_cal.dat", bids_path=bids_path)
+    # write_meg_crosstalk(cal_dir / "ct_sparse.fif", bids_path=bids_path)
 
     # find the ERM file
     erm_files = list(data_folder.glob("*_erm_raw.fif"))
@@ -191,27 +224,33 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
             fid.write(f"ERM file found for subject {subj}, but the file is corrupted\n")
         erm = None
     else:
-        erm = mne.io.read_raw_fif(this_erm_file, **read_raw_kw)
+        # TODO TEMP COMMENT OUT
+        # erm = mne.io.read_raw_fif(this_erm_file, **read_raw_kw)
+        erm = None  # TODO TEMP
 
     # classify the raw files by task, and write them to the BIDS folder
     for raw_file in data_folder.iterdir():
         if raw_file.name in bad_files:
             continue
-        # ↓↓↓↓↓↓ TODO TEMPORARY
-        # if "mmn" not in raw_file.name:
-        #     continue
-        # ↑↑↑↑↑↑ TODO TEMPORARY
         for task_code, task_name in tasks.items():
             if task_code in raw_file.name:
                 # load the data, then re-write it in the BIDS folder tree
-                raw = mne.io.read_raw_fif(raw_file, **read_raw_kw)
+                # raw = mne.io.read_raw_fif(raw_file, **read_raw_kw)  # TODO TEMP
+                info = mne.io.read_info(raw_file)  # TODO TEMP
                 events, _, orig_events = extract_expyfun_events(raw_file)
                 # these offsets disambiguate the 3 different experiments
                 # we subtract 1 because `extract_expyfun_events` automatically adds one
                 # to avoid zero-valued events, but since we're adding additional offsets
                 # that's not needed (and is confusing).
                 events[:, -1] += event_offsets[task_code] - 1
-                parsed_events = score(events, subj, task_code, raw.info["meas_date"])
+                parsed_events, msg = score(
+                    events,
+                    subj,
+                    task_code,
+                    info["meas_date"],  # raw.info["meas_date"]
+                )
+                print(f"parsed {events.shape[0]} events for {raw_file.name} {msg}")
+                continue
                 bids_path.update(task=task_name)
                 write_raw_bids(
                     raw=raw,
