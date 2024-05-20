@@ -1,15 +1,11 @@
 """Create BIDS folder structure for "badbaby" data."""
 
-import json
-from ast import literal_eval
-import datetime
 from pathlib import Path
 from warnings import filterwarnings
-import yaml
 
-import numpy as np
 import mne
-from mnefun import extract_expyfun_events
+import pandas as pd
+import yaml
 from mne_bids import (
     BIDSPath,
     print_dir_tree,
@@ -17,9 +13,13 @@ from mne_bids import (
     write_meg_crosstalk,
     write_raw_bids,
 )
-import pandas as pd
-from pytz import timezone
-from scipy.signal import correlate
+from score import (
+    EVENT_OFFSETS,
+    custom_extract_expyfun_events,
+    find_matching_tabs,
+    parse_mmn_events,
+    score,
+)
 
 # suppress messages about IAS / MaxShield
 mne.set_log_level("WARNING")
@@ -28,6 +28,12 @@ filterwarnings(
     message="This file contains raw Internal Active Shielding data",
     category=RuntimeWarning,
     module="mne",
+)
+# suppress Pandas warning about concat of empty or all-NA DataFrames
+filterwarnings(
+    action="ignore",
+    message="The behavior of DataFrame concatenation with empty or all-NA entries is",
+    category=FutureWarning,
 )
 
 # path stuff
@@ -45,123 +51,6 @@ score_log = outdir / "log-of-scoring-issues-BIDS.txt"
 for log in (erm_log, score_log):
     with open(log, "w") as fid:
         pass
-
-# offsets to disambiguate event IDs from the 3 different experiments
-event_offsets = dict(
-    am=100,
-    ids=2000,
-    mmn=30000,
-)
-
-# exclude list for bad TAB files
-bad_tabs = (
-    "316_2016-07-01 13_38_13.300000.tab",  # 699 events, 165 expyfun events
-    "316_2016-07-01 13_41_48.221000.tab",  # event array has `0` where it should have `4`
-    "231_2016-07-11 12_34_02.159000.tab",  # 5 events, 2 expyfun events
-    "231_2016-07-11 12_21_52.249000.tab",  # 5 events, 2 expyfun events
-)
-
-
-def parse_tab_values(value):
-    try:
-        return float(value)
-    except ValueError:
-        if value == "[ nan]":
-            return np.nan
-        elif value.startswith("["):
-            return literal_eval(value)[0]
-    return value
-
-
-def score(events, subj, exp_type, meas_date):
-    """Convert sequences of 1,4,8 event codes into meaningful trial types."""
-    tab_dir = root / "expyfun-logs"
-    tabs = sorted(tab_dir.glob(f"{subj}_*.tab"))
-    matched_tabs = dict()
-    # find the correct .tab file
-    for tab in tabs:
-        # exclude specific bad TAB files
-        if tab.name in bad_tabs:
-            continue
-        # make sure date matches in filename
-        date = tab.name.split("_")[1].split(" ")[0]
-        if date != str(meas_date.date()):
-            continue
-        # read the file metadata (first line of file)
-        with open(tab, "r") as fid:
-            header = fid.readline()
-        metadata = json.loads(header.lstrip("# ").rstrip().replace("'", '"'))
-        # make sure metadata matches what we want
-        match = dict(IDS="ids", tone="am", syllable="mmn")
-        if match[metadata["exp_name"]] != exp_type:
-            continue
-        assert metadata["participant"] == subj
-        pattern = "%Y-%m-%d %H_%M_%S"
-        if "." in metadata["date"]:
-            pattern += ".%f"
-        tab_date = datetime.datetime.strptime(metadata["date"], pattern).replace(
-            tzinfo=timezone("US/Pacific")
-        )
-        time_diff = tab_date - meas_date
-        # print(time_diff, tab.name)  # TODO REMOVE; FOR DEBUGGING
-        # load the .tab file
-        df = pd.read_csv(tab, comment="#", sep="\t")
-        # convert pandas-unparseable values into something intelligible
-        df["value"] = df["value"].map(parse_tab_values)
-        matched_tabs[time_diff] = df
-    # see how many matches we got
-    if len(matched_tabs) != 1:
-        with open(score_log, "a") as fid:
-            fid.write(
-                f"{len(matched_tabs)} matching TAB files found for subj {subj} "
-                f"task {tasks[exp_type]}\n"
-            )
-    if not len(matched_tabs):
-        return events, "(no valid/matching TAB file found)"
-    # use the one whose timestamp is closest to meas_date
-    which = np.argmin(np.abs(list(matched_tabs)))
-    key = list(matched_tabs)[which]
-    this_tab = matched_tabs[key]
-    msg = f"({str(np.abs(key)).split('.')[0]} time diff between FIF and TAB)"
-    # convert expyfun trial_id to event code
-    # this mapping comes from the original experiment run files (`mmn_expyfun.py`)
-    trial_id_map = {
-        "Dp01bw6-rms": 2,  # midpoint standard
-        "Dp01bw1-rms": 3,  # ba endpoint
-        "Dp01bw10-rms": 4,  # wa endpoint
-    }
-    expyfun_ids = this_tab["value"].loc[this_tab["event"] == "trial_id"]
-    offset = event_offsets[exp_type]
-    if exp_type == "mmn":
-        expyfun_ids = expyfun_ids.map(trial_id_map).to_numpy() + offset
-    elif exp_type == "am":
-        # all trials had same TTL ID of "2"
-        expyfun_ids = np.full_like(expyfun_ids, 2 + offset, dtype=int)
-    elif exp_type == "ids":
-        # TTL IDs ranged from 0-4
-        expyfun_ids += offset
-        expyfun_ids = expyfun_ids.to_numpy().astype(int)
-    else:
-        raise ValueError(f'Unrecognized experiment type "{exp_type}"')
-    event_ids = events[:, -1]
-    size_diff = expyfun_ids.size - event_ids.size
-    if size_diff:
-        shift = np.argmax(
-            correlate(event_ids, expyfun_ids, mode="valid", method="direct")
-        )
-        if size_diff > 0:  # expyfun_ids is bigger
-            start = size_diff - shift
-            stop = start + events.shape[0]
-            np.testing.assert_array_equal(event_ids, expyfun_ids[start:stop])
-        else:  # events is bigger
-            start = shift
-            stop = size_diff
-            np.testing.assert_array_equal(event_ids[start:stop], expyfun_ids)
-            return events[start:stop], msg
-    else:
-        np.testing.assert_array_equal(event_ids, expyfun_ids)
-    return events, msg
-
 
 # surrogate ERMs (same recording date)
 erm_df = pd.read_csv(outdir / "erm-surrogates.csv", index_col=False)
@@ -186,6 +75,8 @@ event_mappings = dict(
 )
 
 read_raw_kw = dict(allow_maxshield=True, preload=False)
+
+df = None
 
 # classify raw files by "task" from the filenames
 for data_folder in orig_data.rglob("bad_*/raw_fif/"):
@@ -237,28 +128,44 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                 # load the data, then re-write it in the BIDS folder tree
                 # raw = mne.io.read_raw_fif(raw_file, **read_raw_kw)  # TODO TEMP
                 info = mne.io.read_info(raw_file)  # TODO TEMP
-                events, _, orig_events = extract_expyfun_events(raw_file)
-                # these offsets disambiguate the 3 different experiments
-                # we subtract 1 because `extract_expyfun_events` automatically adds one
-                # to avoid zero-valued events, but since we're adding additional offsets
-                # that's not needed (and is confusing).
-                events[:, -1] += event_offsets[task_code] - 1
-                parsed_events, msg = score(
+                parse_func = (
+                    parse_mmn_events
+                    if task_code == "mmn"
+                    else custom_extract_expyfun_events
+                )
+                # the offsets disambiguate the 3 different experiments. Not strictly
+                # necessary, but helpful.
+                events, orig_events = parse_func(
+                    raw_file, offset=EVENT_OFFSETS[task_code]
+                )
+                this_df = find_matching_tabs(
                     events,
                     subj,
+                    session,
                     task_code,
                     info["meas_date"],  # raw.info["meas_date"]
+                    logfile=score_log,
                 )
-                print(f"parsed {events.shape[0]} events for {raw_file.name} {msg}")
-                continue
-                bids_path.update(task=task_name)
-                write_raw_bids(
-                    raw=raw,
-                    # events=parsed_events,
-                    # event_id=event_mappings[task_code],
-                    bids_path=bids_path,
-                    empty_room=erm,
-                    overwrite=True,
-                )
+                if df is None:
+                    df = this_df
+                else:
+                    df = pd.concat((df, this_df), axis="index", ignore_index=True)
+                for _fname in this_df["tab_fname"]:
+                    print(f"{subj} {task_code: >3}: {_fname}")
+                if len(this_df) > 1:
+                    raise RuntimeError
+                # print(f"parsed {events.shape[0]} events for {raw_file.name} {msg}")
+                # continue
+                # bids_path.update(task=task_name)
+                # write_raw_bids(
+                #     raw=raw,
+                #     # events=parsed_events,
+                #     # event_id=event_mappings[task_code],
+                #     bids_path=bids_path,
+                #     empty_room=erm,
+                #     overwrite=True,
+                # )
 
-print_dir_tree(bids_root)
+df.to_csv(outdir / "log-of-fif-to-tab-matches.csv")
+print(df)
+# print_dir_tree(bids_root)
