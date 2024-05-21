@@ -26,6 +26,11 @@ redundant_files = (
     # DUPLICATE. bad_208b_erm_raw.fif is inside folder for 209b. Correctly-named file
     # exists from local, and has same size.
     indir / "bad_209b" / "160219" / "bad_208b_erm_raw.fif",
+    # DUPLICATE. bad_301/151005/ folder is exact copy of bad_301a/111111/
+    indir / "bad_301" / "151005" / "bad_301_am_raw.fif",
+    indir / "bad_301" / "151005" / "bad_301_erm_raw.fif",
+    indir / "bad_301" / "151005" / "bad_301_ids_raw.fif",
+    indir / "bad_301" / "151005" / "bad_301_mmn_raw.fif",
     # CORRUPT. Extra "_bad_" in filename; correctly-named file exists in same directory
     # and is larger.
     indir / "bad_311a" / "160126" / "bad_311a_mmn_bad_raw.fif",
