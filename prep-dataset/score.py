@@ -1,10 +1,9 @@
 import json
+import re
 from ast import literal_eval
 from datetime import datetime
 from pathlib import Path
-import re
-from warnings import filterwarnings, warn
-import yaml
+from warnings import warn
 
 import mne
 import numpy as np
@@ -26,20 +25,6 @@ tab_dir = root / "expyfun-logs"
 orig_data = root / "data"
 outdir = root / "prep-dataset" / "qc"
 
-filterwarnings(
-    action="ignore",
-    message="This file contains raw Internal Active Shielding data",
-    category=RuntimeWarning,
-    module="mne",
-)
-# suppress Pandas warning about concat of empty or all-NA DataFrames. The new behavior
-# (keeping NAs) is what we want
-filterwarnings(
-    action="ignore",
-    message="The behavior of DataFrame concatenation with empty or all-NA entries is",
-    category=FutureWarning,
-)
-
 
 def parse_tab_values(value):
     """Convert string values in the TAB files to Python/NumPy types."""
@@ -54,9 +39,9 @@ def parse_tab_values(value):
             return value
 
 
-def get_association(event_ids, expyfun_ids):
+def get_association(fif_events, tab_events):
     """Get the association (Cramér's V) between two sequences of event codes."""
-    xtab = crosstab(event_ids, expyfun_ids)
+    xtab = crosstab(fif_events, tab_events)
     # fake a 2D crosstab for AM-tone exp (where there's only one event)
     if xtab.count.size == 1:
         count = np.array([[xtab.count.item(), 0], [0, xtab.count.item()]])
@@ -64,11 +49,11 @@ def get_association(event_ids, expyfun_ids):
     return association(xtab.count)
 
 
-def ensure_events_match(event_ids, expyfun_ids, assoc, require_ids_match=True):
+def ensure_events_match(fif_events, tab_events, assoc, require_ids_match=True):
     """Assert that the association is unity and the event IDs match."""
     np.testing.assert_almost_equal(assoc, 1.0, decimal=12)
     if require_ids_match:
-        np.testing.assert_array_equal(event_ids, expyfun_ids)
+        np.testing.assert_array_equal(fif_events, tab_events)
 
 
 def parse_mmn_events(raw_fname, offset=0):
@@ -92,12 +77,17 @@ def parse_mmn_events(raw_fname, offset=0):
             trial_id = int("".join(map(str, bits)), base=2)
         else:  # final span may not have any trial ID triggers in it
             assert ix == len(stim_idx), f"bad triggers in trial {ix}/{len(stim_idx)}"
-            trial_id = 0
-        trial_ids.append(trial_id + offset)
-    # assert np.isin(trial_ids, [2, 3, 4]).all(), np.unique(trial_ids)
+            trial_id = -1  # will change to 0 a few lines down
+        trial_ids.append(trial_id)
+    trial_ids = np.array(trial_ids)
+    # correct mysterious 0 ID that should have been a 4
+    if set(trial_ids) == {2, 3, 0}:
+        trial_ids[np.nonzero(trial_ids == 0)] = 4
+    # construct final events array
+    trial_ids[np.nonzero(trial_ids == -1)] = 0
     events = orig_events[stim_idx].copy()
     valid_ix = np.nonzero(trial_ids)[0]
-    events[valid_ix, 2] = np.array(trial_ids)[valid_ix]
+    events[valid_ix, 2] = trial_ids[valid_ix] + offset
     return events[valid_ix], orig_events
 
 
@@ -130,9 +120,10 @@ def custom_extract_expyfun_events(fname, offset=0):
     # check for the correct number of trials
     aud_idx = np.where(events[:, 2] == 1)[0]
     breaks = np.concatenate(([0], aud_idx, [len(events)]))
-    # resps = []
+    # resps = []  # XXX REMOVED
     event_nums = []
     for ti in range(len(aud_idx)):
+        # XXX REMOVED ↓↓↓
         # # pull out responses (they come *after* 1 trig)
         # these = events[breaks[ti + 1] : breaks[ti + 2], :]
         # resp = these[these[:, 2] > 8]
@@ -140,28 +131,31 @@ def custom_extract_expyfun_events(fname, offset=0):
         #     (resp[:, 0] - events[ti, 0]) / raw.info["sfreq"], np.log2(resp[:, 2]) - 3
         # ]
         # resps.append(resp if return_offsets else resp[:, 1])
+        # XXX REMOVED ↑↑↑
 
         # look at trial coding, double-check trial type (pre-1 trig)
         these = events[breaks[ti + 0] : breaks[ti + 1], 2]
         serials = these[np.logical_and(these >= 4, these <= 8)]
-        en = np.sum(2 ** np.arange(len(serials))[::-1] * (serials == 8)) + 1
+        # XXX CHANGED ↓↓↓
+        # en = np.sum(2 ** np.arange(len(serials))[::-1] * (serials == 8)) + 1
+        en = np.sum(2 ** np.arange(len(serials))[::-1] * (serials == 8)) + offset
         event_nums.append(en)
 
     these_events = events[aud_idx]
-    these_events[:, 2] = np.array(event_nums) + offset
-    # return these_events, resps, orig_events
+    these_events[:, 2] = np.array(event_nums)
+    # return these_events, resps, orig_events  # XXX CHANGED
     return these_events, orig_events
 
 
 def find_matching_tabs(events, subj, session, exp_type, meas_date, logfile):
-    """Convert sequences of 1,4,8 event codes into meaningful trial types."""
+    """Find the TAB file that matches each FIF, and verify the event sequences match."""
     rows = None
     # events from FIF (as parsed by `extract_expyfun_events`)
-    event_ids = events[:, -1]
+    fif_events = events[:, -1]
     # make sure subject and date matches in filename
     candidate_tabs = sorted(tab_dir.glob(f"{subj}_{meas_date.date()}*.tab"))
     # get the unique events from FIF
-    fif_ev_uniq, fif_ev_counts = np.unique(event_ids, return_counts=True)
+    fif_ev_uniq, fif_ev_counts = np.unique(fif_events, return_counts=True)
     fif_ev_idx = np.argsort(fif_ev_counts)
     fif_ev_uniq = fif_ev_uniq[fif_ev_idx]
     fif_ev_counts = fif_ev_counts[fif_ev_idx]
@@ -174,7 +168,7 @@ def find_matching_tabs(events, subj, session, exp_type, meas_date, logfile):
             subj=pd.Series([subj], dtype=_s),
             session=pd.Series([session], dtype=_s),
             exp=pd.Series([exp_type], dtype=_s),
-            fif_n_events=pd.Series([event_ids.size], dtype=_i),
+            fif_n_events=pd.Series([fif_events.size], dtype=_i),
             tab_n_events=pd.Series([pd.NA], dtype=_i),
             fif_ev_uniq=pd.Series([fif_ev_uniq], dtype=object),
             tab_ev_uniq=pd.Series([pd.NA], dtype=object),
@@ -184,6 +178,7 @@ def find_matching_tabs(events, subj, session, exp_type, meas_date, logfile):
             tab_time=pd.Series([pd.NA], dtype=_dt),
             time_diff=pd.Series([pd.NA], dtype=_s),
             tab_fname=pd.Series([pd.NA], dtype=_s),
+            assoc=pd.Series([pd.NA], dtype=pd.Float64Dtype()),
         )
     )
     # if no TAB files found, still log something
@@ -227,13 +222,13 @@ def find_matching_tabs(events, subj, session, exp_type, meas_date, logfile):
         # convert pandas-unparseable values into something intelligible
         tab_df["value"] = tab_df["value"].map(parse_tab_values)
         # convert expyfun trial_id to event code
-        expyfun_ids = tab_df["value"].loc[tab_df["event"] == "trial_id"]
+        tab_events = tab_df["value"].loc[tab_df["event"] == "trial_id"]
         if exp_type == "am":
             # all trials had same TTL ID of "2"
-            expyfun_ids = np.full_like(expyfun_ids, 2, dtype=int)
+            tab_events = np.full_like(tab_events, 2, dtype=int)
         elif exp_type == "ids":
             # TTL IDs ranged from 0-4
-            expyfun_ids = expyfun_ids.to_numpy().astype(int)
+            tab_events = tab_events.to_numpy().astype(int)
         elif exp_type == "mmn":
             # mapping comes from the original experiment run files (`mmn_expyfun.py`)
             trial_id_map = {
@@ -241,26 +236,42 @@ def find_matching_tabs(events, subj, session, exp_type, meas_date, logfile):
                 "Dp01bw1-rms": 3,  # ba endpoint
                 "Dp01bw10-rms": 4,  # wa endpoint
             }
-            expyfun_ids = expyfun_ids.map(trial_id_map).to_numpy()
+            tab_events = tab_events.map(trial_id_map).to_numpy()
         else:
             raise ValueError(f'Unrecognized experiment type "{exp_type}"')
+        # adjust for script bug by dropping first trial ID from TAB file
+        # (corresponding change for FIF already done in `parse_mmn_events` func)
+        if exp_type == "mmn" and fif_events.size == tab_events.size - 1:
+            tab_events = tab_events[1:]
         # offsets disambiguate the 3 experiments. Helpful but not strictly necessary
-        expyfun_ids += EVENT_OFFSETS[exp_type]
+        tab_events += EVENT_OFFSETS[exp_type]
         # get the unique events from TAB file
-        tab_ev_uniq, tab_ev_counts = np.unique(expyfun_ids, return_counts=True)
+        tab_ev_uniq, tab_ev_counts = np.unique(tab_events, return_counts=True)
         tab_ev_idx = np.argsort(tab_ev_counts)
         tab_ev_uniq = tab_ev_uniq[tab_ev_idx]
         tab_ev_counts = tab_ev_counts[tab_ev_idx]
+        # get association between FIF & TAB events (like correlation but for categories)
+        if fif_events.size == tab_events.size:
+            try:
+                assoc = get_association(fif_events, tab_events)
+            except RuntimeWarning as err:
+                if str(err) == "invalid value encountered in scalar divide":
+                    assoc = 0.0
+                else:
+                    raise
+        else:
+            assoc = pd.NA
         # assemble the data of interest and write it to DataFrame
         this_row = row_with_na.copy()
         this_row.update(
             dict(
-                tab_n_events=[expyfun_ids.size],
+                tab_n_events=[tab_events.size],
                 tab_ev_uniq=[tab_ev_uniq],
                 tab_ev_counts=[tab_ev_counts],
                 tab_time=[tab_date],
                 time_diff=[time_diff_str],
                 tab_fname=[tab.name],
+                assoc=[assoc],
             )
         )
         if rows is None:
@@ -271,38 +282,53 @@ def find_matching_tabs(events, subj, session, exp_type, meas_date, logfile):
     if rows is None:
         assert exp_type not in tab_exp_types
         return row_with_na
-    # if there's only one candidate TAB file, just go with it
-    elif len(rows) == 1:
-        return rows
-    # figure out which TAB is the best match
+    # handle special cases (which TAB file to keep was chosen after manual inspection)
+    # manual_selections = {
+    #     ("223", "b", "mmn"): "223_2017-05-08 10_54_04.227000.tab",
+    #     ("310", "a", "mmn"): "310_2016-01-12 14_28_51.148000.tab",
+    #     ("301", "a", "mmn"): "301_2015-10-05 11_04_50.526000.tab",
+    #     ("309", "a", "mmn"): "309_2016-01-15 11_32_55.686000.tab",
+    # }
+    # key = (subj, session, exp_type)
+    # if key in manual_selections:
+    #     msg = f"{subj}{session} {exp_type: >3}: event count mismatch; needs follow-up\n"
+    #     with open(logfile, "a") as fid:
+    #         fid.write(msg)
+    #     return rows.loc[rows["tab_fname"] == manual_selections[key]]
+    # check match between number of events in FIF and TAB
     events_diff = rows["fif_n_events"] - rows["tab_n_events"]
     events_n_closest = abs(events_diff) == abs(events_diff).min()
-    events_match = rows[["fif_ev_uniq", "tab_ev_uniq"]].apply(
+    unique_events_match = rows[["fif_ev_uniq", "tab_ev_uniq"]].apply(
         lambda row: np.array_equiv(*row), axis="columns"
     )
-    # check for matching counts of each event type, allowing MMN exp to be off-by-1
-    event_counts_match = rows[["fif_ev_counts", "tab_ev_counts"]].apply(
+    # check for matching counts of each event type
+    # (MMN exp is allowed to be off-by-1; this was already adjusted for above)
+    counts_match = rows[["fif_ev_counts", "tab_ev_counts"]].apply(
         lambda row: np.array_equiv(*row), axis="columns"
     )
-    mmn_off_by_one = rows[["fif_ev_counts", "tab_ev_counts"]].apply(
-        lambda row: False
-        if row.iloc[0].shape != row.iloc[1].shape
-        else (np.sum(np.abs(row.iloc[0] - row.iloc[1])) == 1 & (exp_type == "mmn")),
-        axis="columns",
+    # check association (perfect match should be 1. but sometimes the `association` func
+    # returns 0.999999999999 or so)
+    sequences_match = rows["assoc"].apply(
+        lambda a: False if pd.isna(a) else np.isclose(a=a, b=1.0, rtol=0.0, atol=1e-12)
     )
-    # if these three criteria are uniquely met, keep only the matching row
-    _match = events_n_closest & events_match & (event_counts_match | mmn_off_by_one)
+    # if these four criteria are uniquely met, keep only the matching row
+    _match = events_n_closest & unique_events_match & counts_match & sequences_match
     if _match.sum() == 1:
         return rows.iloc[np.nonzero(_match)]
     # failing that, allow for event IDs to be off if the counts look good, but warn
-    _match = events_n_closest & (event_counts_match | mmn_off_by_one)
+    _match = events_n_closest & counts_match & sequences_match
     if _match.sum() == 1:
         with open(logfile, "a") as fid:
             msg = f"{subj}{session} {exp_type: >3}: event counts match but IDs don't\n"
             fid.write(msg)
         return rows.iloc[np.nonzero(_match)]
-    # time_diff_series = (rows["tab_time"] - rows["fif_time"]).dt.total_seconds()
-    # time_diff_shortest = abs(time_diff_series) == abs(time_diff_series).min()
-    # time_diff_positive = time_diff_series > 0
-    # otherwise keep all the rows, we'll want to manually decide which to keep
-    return rows
+    # failing that, take the one with closest number of events
+    _match = events_n_closest
+    if _match.sum() == 1:
+        with open(logfile, "a") as fid:
+            msg = f"{subj}{session} {exp_type: >3}: event count mismatch; needs follow-up\n"
+            fid.write(msg)
+        return rows.iloc[np.nonzero(_match)]
+    # can't automatically choose TAB file
+    else:
+        raise RuntimeError(f"Failed to match FIF to TAB for {subj}{session} {exp_type}")

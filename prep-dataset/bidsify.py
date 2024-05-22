@@ -2,38 +2,54 @@
 
 from pathlib import Path
 from warnings import filterwarnings
+import yaml
 
 import mne
-import pandas as pd
-import yaml
 from mne_bids import (
     BIDSPath,
-    print_dir_tree,
     write_meg_calibration,
     write_meg_crosstalk,
     write_raw_bids,
 )
+import pandas as pd
+
 from score import (
     EVENT_OFFSETS,
     custom_extract_expyfun_events,
     find_matching_tabs,
     parse_mmn_events,
-    score,
 )
 
-# suppress messages about IAS / MaxShield
+verify_events_against_tab_files = True
+
 mne.set_log_level("WARNING")
+# suppress messages about IAS / MaxShield
 filterwarnings(
     action="ignore",
     message="This file contains raw Internal Active Shielding data",
     category=RuntimeWarning,
     module="mne",
 )
-# suppress Pandas warning about concat of empty or all-NA DataFrames
+# suppress message about bad filename `*raw2.fif`
+filterwarnings(
+    action="ignore",
+    message=r"This filename \(.*\) does not conform to MNE naming conventions",
+    category=RuntimeWarning,
+    module="mne",
+)
+# suppress Pandas warning about concat of empty or all-NA DataFrames. The new behavior
+# (keeping NAs) is what we want
 filterwarnings(
     action="ignore",
     message="The behavior of DataFrame concatenation with empty or all-NA entries is",
     category=FutureWarning,
+)
+# elevate SciPy warning so we can catch and handle it
+filterwarnings(
+    action="error",
+    message="invalid value encountered in scalar divide",
+    category=RuntimeWarning,
+    module="scipy",
 )
 
 # path stuff
@@ -47,8 +63,9 @@ bids_path = BIDSPath(root=bids_root, datatype="meg", suffix="meg", extension=".f
 
 # init logging (erase old log files)
 erm_log = outdir / "log-of-ERM-issues-BIDS.txt"
-score_log = outdir / "log-of-scoring-issues-BIDS.txt"
-for log in (erm_log, score_log):
+score_log = outdir / "log-of-scoring-issues.txt"
+logs = (erm_log, score_log) if verify_events_against_tab_files else (erm_log,)
+for log in logs:
     with open(log, "w") as fid:
         pass
 
@@ -69,9 +86,9 @@ tasks = dict(
 
 # event mappings
 event_mappings = dict(
-    am=dict(),
-    ids=dict(),
-    mmn=dict(),
+    am=dict(amtone=102),
+    ids=dict(trial_0=200, trial_1=201, trial_2=202, trial_3=203, trial_4=204),
+    mmn=dict(standard=302, deviant_ba=303, deviant_wa=304),
 )
 
 read_raw_kw = dict(allow_maxshield=True, preload=False)
@@ -94,9 +111,8 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
 
     # write the fine-cal and crosstalk files (once per subject/session)
     bids_path.update(session=session, subject=subj)
-    # TODO TEMP COMMENT OUT
-    # write_meg_calibration(cal_dir / "sss_cal.dat", bids_path=bids_path)
-    # write_meg_crosstalk(cal_dir / "ct_sparse.fif", bids_path=bids_path)
+    write_meg_calibration(cal_dir / "sss_cal.dat", bids_path=bids_path)
+    write_meg_crosstalk(cal_dir / "ct_sparse.fif", bids_path=bids_path)
 
     # find the ERM file
     erm_files = list(data_folder.glob("*_erm_raw.fif"))
@@ -115,57 +131,48 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
             fid.write(f"ERM file found for subject {subj}, but the file is corrupted\n")
         erm = None
     else:
-        # TODO TEMP COMMENT OUT
-        # erm = mne.io.read_raw_fif(this_erm_file, **read_raw_kw)
-        erm = None  # TODO TEMP
+        erm = mne.io.read_raw_fif(this_erm_file, **read_raw_kw)
 
     # classify the raw files by task, and write them to the BIDS folder
     for raw_file in data_folder.iterdir():
         if raw_file.name in bad_files:
             continue
         for task_code, task_name in tasks.items():
-            if task_code in raw_file.name:
-                # load the data, then re-write it in the BIDS folder tree
-                # raw = mne.io.read_raw_fif(raw_file, **read_raw_kw)  # TODO TEMP
-                info = mne.io.read_info(raw_file)  # TODO TEMP
-                parse_func = (
-                    parse_mmn_events
-                    if task_code == "mmn"
-                    else custom_extract_expyfun_events
-                )
-                # the offsets disambiguate the 3 different experiments. Not strictly
-                # necessary, but helpful.
-                events, orig_events = parse_func(
-                    raw_file, offset=EVENT_OFFSETS[task_code]
-                )
+            if task_code not in raw_file.name:
+                continue
+            # load the data, then re-write it in the BIDS folder tree
+            raw = mne.io.read_raw_fif(raw_file, **read_raw_kw)
+            score_func = (
+                parse_mmn_events
+                if task_code == "mmn"
+                else custom_extract_expyfun_events
+            )
+            # the offsets disambiguate the 3 different experiments. Not strictly
+            # necessary, but helpful.
+            events, orig_events = score_func(raw_file, offset=EVENT_OFFSETS[task_code])
+            if verify_events_against_tab_files:
                 this_df = find_matching_tabs(
                     events,
                     subj,
                     session,
                     task_code,
-                    info["meas_date"],  # raw.info["meas_date"]
+                    raw.info["meas_date"],
                     logfile=score_log,
                 )
                 if df is None:
                     df = this_df
                 else:
                     df = pd.concat((df, this_df), axis="index", ignore_index=True)
-                for _fname in this_df["tab_fname"]:
-                    print(f"{subj} {task_code: >3}: {_fname}")
-                if len(this_df) > 1:
-                    raise RuntimeError
-                # print(f"parsed {events.shape[0]} events for {raw_file.name} {msg}")
-                # continue
-                # bids_path.update(task=task_name)
-                # write_raw_bids(
-                #     raw=raw,
-                #     # events=parsed_events,
-                #     # event_id=event_mappings[task_code],
-                #     bids_path=bids_path,
-                #     empty_room=erm,
-                #     overwrite=True,
-                # )
+            bids_path.update(task=task_name)
+            write_raw_bids(
+                raw=raw,
+                events=events,
+                event_id=event_mappings[task_code],
+                bids_path=bids_path,
+                empty_room=erm,
+                overwrite=True,
+            )
+            print(f"{subj} {session} {task_code: >3} completed")
 
-df.to_csv(outdir / "log-of-fif-to-tab-matches.csv")
-print(df)
-# print_dir_tree(bids_root)
+if verify_events_against_tab_files:
+    df.to_csv(outdir / "log-of-fif-to-tab-matches.csv")
