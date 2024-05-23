@@ -26,6 +26,5 @@ rsync -rtvzm --partial --progress --delete --chown $USER:badbaby \
     --include='bad*_raw.fif' \
     --include='bad*_raw2.fif' \
     --include='bad*_erm.fif' \
-    --include='bad*_prebad.txt' \
     --exclude='*' \
     /media/mdclarke/Untitled/ $DESTDIR
