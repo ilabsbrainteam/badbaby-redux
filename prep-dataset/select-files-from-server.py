@@ -39,6 +39,19 @@ redundant_files = (
     indir / "bad_218a" / "151202" / "bad_218a_am_raw.fif",
     indir / "bad_226b" / "160525" / "bad_226b_am_raw.fif",
     indir / "bad_316b" / "160701" / "bad_316b_am_raw.fif",
+    # CORRUPT. file can be opened, but has no event triggers due to bad data cable.
+    indir / "bad_304a" / "151103" / "bad_304a_mmn_raw.fif",
+    indir / "bad_305a" / "151105" / "bad_305a_mmn_raw.fif",
+    indir / "bad_108" / "151106" / "bad_108_am_raw.fif",
+    indir / "bad_108" / "151106" / "bad_108_erm_raw.fif",
+    indir / "bad_108" / "151106" / "bad_108_ids_raw.fif",
+    indir / "bad_108" / "151106" / "bad_108_mmn_raw.fif",
+    indir / "bad_212" / "151104" / "bad_212_am_raw.fif",
+    indir / "bad_212" / "151104" / "bad_212_ids_raw.fif",
+    indir / "bad_212" / "151104" / "bad_212_mmn_raw.fif",
+    indir / "bad_212" / "111111" / "bad_212_am_raw.fif",
+    indir / "bad_212" / "111111" / "bad_212_ids_raw.fif",
+    indir / "bad_212" / "111111" / "bad_212_mmn_raw.fif",
 )
 for _file in redundant_files:
     _ = mapping.pop(_file)

@@ -17,6 +17,9 @@ redundant_files = (
     # CORRUPT. larger file with same name in server's `111111` folder.
     indir / "bad_316b" / "raw_fif" / "bad_316b_am_raw.fif",
     indir / "bad_226b" / "raw_fif" / "bad_226b_am_raw.fif",
+    # CORRUPT. file can be opened, but has no event triggers due to bad data cable.
+    indir / "bad_304a" / "raw_fif" / "bad_304a_mmn_raw.fif",
+    indir / "bad_305a" / "raw_fif" / "bad_305a_mmn_raw.fif",
 )
 for _file in redundant_files:
     _ = mapping.pop(_file)

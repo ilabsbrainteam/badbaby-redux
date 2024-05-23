@@ -29,8 +29,3 @@ The script `prep-dataset/bidsify.py` will convert the dataset to BIDS format in 
 # TODOS
 
 - [ ] there are still some pairs of `-raw.fif` and `-raw2.fif` for the same subject/session. Need to check logs and/or view files to determine which to use (we shouldn't use both!)
-- [ ] a handful of MMN FIF files seem to have zero events:
-    - 108c
-    - 212c
-    - 304a
-    - 305a
