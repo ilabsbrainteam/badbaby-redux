@@ -2,17 +2,16 @@
 
 from pathlib import Path
 from warnings import filterwarnings
-import yaml
 
 import mne
+import pandas as pd
+import yaml
 from mne_bids import (
     BIDSPath,
     write_meg_calibration,
     write_meg_crosstalk,
     write_raw_bids,
 )
-import pandas as pd
-
 from score import (
     EVENT_OFFSETS,
     custom_extract_expyfun_events,
