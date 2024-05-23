@@ -9,8 +9,8 @@ import yaml
 def hardlink(source, target, dry_run=True):
     """Create target dirs, then hardlink."""
     target.parent.mkdir(parents=True, exist_ok=True)
-    # need sudo to be able to preserve permissions
-    cmd = ["sudo", "cp", "-ln", "--preserve=all", str(source), str(target)]
+    # even with sudo `--preserve=all` doesn't work, so chown too
+    cmd = ["cp", "-ln", "--preserve=all", str(source), str(target)]
     if not dry_run:
         run(cmd)
 
@@ -53,6 +53,9 @@ for source, target in mapping.items():
                 f"FILE SIZE MISMATCH: not linking {source.relative_to(root)} to "
                 f"{target.relative_to(root)}"
             )
+
+if not dry_run:
+    run(["chgrp", "--recursive", "badbaby", str(root / "data")])
 
 with open(outdir / "log-of-hardlinking.txt", "w") as fid:
     logfile.seek(0)
