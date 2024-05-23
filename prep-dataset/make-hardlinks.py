@@ -9,7 +9,8 @@ import yaml
 def hardlink(source, target, dry_run=True):
     """Create target dirs, then hardlink."""
     target.parent.mkdir(parents=True, exist_ok=True)
-    cmd = ["cp", "-ln", "--preserve=all", str(source), str(target)]
+    # need sudo to be able to preserve permissions
+    cmd = ["sudo", "cp", "-ln", "--preserve=all", str(source), str(target)]
     if not dry_run:
         run(cmd)
 
