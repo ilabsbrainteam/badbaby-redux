@@ -134,8 +134,15 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
 
     # classify the raw files by task, and write them to the BIDS folder
     for raw_file in data_folder.iterdir():
+        custom_erm = None
         if raw_file.name in bad_files:
             continue
+        # special case: MMN file recorded on different day than other runs, thus has
+        # different ERM
+        if raw_file.name == "bad_301b_mmn_raw.fif":
+            erm_path = orig_data / "bad_301b" / "raw_fif" / "bad_301b_erm_raw2.fif"
+            custom_erm = mne.io.read_raw_fif(erm_path)
+        # loop over experimental tasks
         for task_code, task_name in tasks.items():
             if task_code not in raw_file.name:
                 continue
@@ -168,7 +175,7 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                 events=events,
                 event_id=event_mappings[task_code],
                 bids_path=bids_path,
-                empty_room=erm,
+                empty_room=custom_erm or erm,
                 overwrite=True,
             )
             print(f"{subj} {session} {task_code: >3} completed")

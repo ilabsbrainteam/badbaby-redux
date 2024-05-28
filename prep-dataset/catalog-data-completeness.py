@@ -47,9 +47,11 @@ for _dir in subj_dirs:
     for _fname in (_dir / subdir).iterdir():
         for _kind in expected_files:
             df_row[_kind] |= _fname.name.endswith(_kind)
-        if not re.match(pattern, _fname.name):
-            with add_to_err:
-                print(f"unexpected file: {_fname}")
+        # special case: this one we name `raw2` on purpose
+        if (not re.match(pattern, _fname.name) and
+            not _fname.name == "bad_301b_erm_raw2.fif"):
+                with add_to_err:
+                    print(f"unexpected file: {_fname}")
     for _kind, value in df_row.items():
         expected_files[_kind].append(value)
 # aggregate results into a dataframe
