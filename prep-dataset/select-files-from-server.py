@@ -26,6 +26,8 @@ redundant_files = (
     # DUPLICATE. bad_208b_erm_raw.fif is inside folder for 209b. Correctly-named file
     # exists from local, and has same size.
     indir / "bad_209b" / "160219" / "bad_208b_erm_raw.fif",
+    # BAD DATA. First session note: "cap shifted, reschedule". Have second session file.
+    indir / "bad_209b" / "160219" / "bad_209b_mmn_raw.fif",
     # DUPLICATE. bad_301/151005/ folder is exact copy of bad_301a/111111/
     indir / "bad_301" / "151005" / "bad_301_am_raw.fif",
     indir / "bad_301" / "151005" / "bad_301_erm_raw.fif",
@@ -37,6 +39,7 @@ redundant_files = (
     # CORRUPT. Filenames are fine but files can't be opened; we have usable copies in
     # the corresponding `111111` folder.
     indir / "bad_218a" / "151202" / "bad_218a_am_raw.fif",
+    indir / "bad_218a" / "151202" / "bad_218a_am_raw2.fif",
     indir / "bad_226b" / "160525" / "bad_226b_am_raw.fif",
     indir / "bad_316b" / "160701" / "bad_316b_am_raw.fif",
     # CORRUPT. file can be opened, but has no event triggers due to bad data cable.
@@ -52,9 +55,28 @@ redundant_files = (
     indir / "bad_212" / "111111" / "bad_212_am_raw.fif",
     indir / "bad_212" / "111111" / "bad_212_ids_raw.fif",
     indir / "bad_212" / "111111" / "bad_212_mmn_raw.fif",
+    # COMPLICATED. has `raw.fif` and `raw2.fif`; this one handled in local files.
+    indir / "bad_128a" / "160126" / "bad_128a_ids_raw2.fif",
+    indir / "bad_128a" / "160126" / "bad_128a_ids_raw.fif",
+    indir / "bad_128a" / "111111" / "bad_128a_ids_raw.fif",
+    # COMPLICATED. has `raw.fif` and `raw2.fif`; add `raw2.fif` in separate block below.
+    indir / "bad_202" / "150916" / "bad_baby_202_ids_raw.fif",
+    indir / "bad_208" / "151007" / "bad_208_ids_raw.fif",
 )
 for _file in redundant_files:
     _ = mapping.pop(_file)
+
+# FIX COMPLICATED CASES: `raw.fif` is corrupted and `raw2.fif` is good
+# fmt: off
+fix_corrupted = {
+    indir / "bad_202" / "150916" / "bad_baby_202_ids_raw2.fif":
+    outdir / "bad_202" / "raw_fif" / "bad_202_ids_raw.fif",
+
+    indir / "bad_208" / "151007" / "bad_208_ids_raw2.fif":
+    outdir / "bad_208" / "raw_fif" / "bad_208_ids_raw.fif",
+}
+# fmt: on
+mapping.update(fix_corrupted)
 
 # SKIP REDUNDANT FOLDERS
 redundant_folders = (
@@ -73,6 +95,7 @@ for _file in redundant_files:
 
 # FIX BAD FILENAME PATTERN: bad_baby_*, bad_bay_*, bad__baby_* → bad_*
 for prefix in ("bad_baby_", "bad_bay_", "bad__baby_"):
+    # fmt: off
     mapping.update(
         {
             source:
@@ -80,8 +103,10 @@ for prefix in ("bad_baby_", "bad_bay_", "bad__baby_"):
             for source in indir.rglob(f"{prefix}*.fif")
         }
     )
+    # fmt: on
 
 # FIX BAD FILENAME PATTERN: *_erm.fif → *_erm_raw.fif
+# fmt: off
 mapping.update(
     {
         source:
@@ -89,8 +114,10 @@ mapping.update(
         for source in indir.rglob("*_erm.fif")
     }
 )
+# fmt: on
 
 # FIX INDIVIDUAL BAD FILENAMES
+# fmt: off
 mapping.update(
     {
         # 117 → 117b. There is no session 117 without the "a" or "b"; other files in
@@ -114,12 +141,9 @@ mapping.update(
         # that folder correctly include the "a"
         indir / "bad_310a" / "160112" / "bad_310_ids_raw.fif":
         outdir / "bad_310a" / "raw_fif" / "bad_310a_ids_raw.fif",
-        # AVOID CLOBBER (raw.fif → raw2.fif). Prevent file from second MEG session from
-        # overwriting earlier run, until we know for sure which one we want (TODO).
-        indir / "bad_209b" / "160225" / "bad_209b_mmn_raw.fif":
-        outdir / "bad_209b" / "raw_fif" / "bad_209b_mmn_raw2.fif",
     }
 )
+# fmt: on
 
 # 233 & 233b → 233a. All files in this folder have wrong subject ID. There is no folder
 # for 233 or 233b, either local or server.
