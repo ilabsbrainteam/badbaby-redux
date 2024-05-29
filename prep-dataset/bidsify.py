@@ -84,6 +84,7 @@ tasks = dict(
 )
 
 # event mappings
+generic_events = dict(BAD_ACQ_SKIP=999)
 event_mappings = dict(
     am=dict(amtone=102),
     ids=dict(trial_0=200, trial_1=201, trial_2=202, trial_3=203, trial_4=204),
@@ -141,7 +142,7 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
         # different ERM
         if raw_file.name == "bad_301b_mmn_raw.fif":
             erm_path = orig_data / "bad_301b" / "raw_fif" / "bad_301b_erm_raw2.fif"
-            custom_erm = mne.io.read_raw_fif(erm_path)
+            custom_erm = mne.io.read_raw_fif(erm_path, **read_raw_kw)
         # loop over experimental tasks
         for task_code, task_name in tasks.items():
             if task_code not in raw_file.name:
@@ -173,7 +174,7 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
             write_raw_bids(
                 raw=raw,
                 events=events,
-                event_id=event_mappings[task_code],
+                event_id=event_mappings[task_code] | generic_events,
                 bids_path=bids_path,
                 empty_room=custom_erm or erm,
                 overwrite=True,

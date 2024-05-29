@@ -143,6 +143,13 @@ def custom_extract_expyfun_events(fname, offset=0):
 
     these_events = events[aud_idx]
     these_events[:, 2] = np.array(event_nums)
+    # XXX ADDED ↓↓↓
+    bad_cabling = (
+        "bad_305a_am_raw.fif",
+    )
+    if fname.name in bad_cabling:
+        these_events[:, 2] += 2
+    # XXX ADDED ↑↑↑
     # return these_events, resps, orig_events  # XXX CHANGED
     return these_events, orig_events
 
