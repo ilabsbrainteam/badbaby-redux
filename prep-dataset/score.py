@@ -289,19 +289,6 @@ def find_matching_tabs(events, subj, session, exp_type, meas_date, logfile):
     if rows is None:
         assert exp_type not in tab_exp_types
         return row_with_na
-    # handle special cases (which TAB file to keep was chosen after manual inspection)
-    # manual_selections = {
-    #     ("223", "b", "mmn"): "223_2017-05-08 10_54_04.227000.tab",
-    #     ("310", "a", "mmn"): "310_2016-01-12 14_28_51.148000.tab",
-    #     ("301", "a", "mmn"): "301_2015-10-05 11_04_50.526000.tab",
-    #     ("309", "a", "mmn"): "309_2016-01-15 11_32_55.686000.tab",
-    # }
-    # key = (subj, session, exp_type)
-    # if key in manual_selections:
-    #     msg = f"{subj}{session} {exp_type: >3}: event count mismatch; needs follow-up\n"
-    #     with open(logfile, "a") as fid:
-    #         fid.write(msg)
-    #     return rows.loc[rows["tab_fname"] == manual_selections[key]]
     # check match between number of events in FIF and TAB
     events_diff = rows["fif_n_events"] - rows["tab_n_events"]
     events_n_closest = abs(events_diff) == abs(events_diff).min()
