@@ -63,6 +63,8 @@ redundant_files = (
     # CORRUPT. Extra "_bad_" in filename; correctly-named file exists in same directory
     # and is larger.
     indir / "bad_311a" / "160126" / "bad_311a_mmn_bad_raw.fif",
+    # CORRUPT. file cannot be opened ("no raw data in file").
+    indir / "bad_317a" / "160331" / "bad_baby_317a_erm_raw.fif",
     # CORRUPT. Filenames are fine but files can't be opened; we have usable copies in
     # the corresponding `111111` folder.
     indir / "bad_218a" / "151202" / "bad_218a_am_raw.fif",
