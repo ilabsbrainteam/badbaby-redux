@@ -163,10 +163,10 @@ mapping.update(
 # (meas_date in files agree: this was ~18mo not ~6mo). However, meas_date matches
 # appointment log date for subj 233b (which doesn't have a folder of data files)
 mapping.update(
-     {
-          source: outdir / "bad_233b" / "raw_fif" / source.name.replace("223", "233")
-          for source in (indir / "bad_223b" / "170508").glob("*.fif")
-     }
+    {
+        source: outdir / "bad_233b" / "raw_fif" / source.name.replace("223", "233")
+        for source in (indir / "bad_223b" / "170508").glob("*.fif")
+    }
 )
 # 233 & 233b → 233a. All files in this folder have wrong subject ID (relative to
 # containing folder). There is no folder for 233 or 233b (except the one created in the
