@@ -154,6 +154,22 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                 if task_code == "mmn"
                 else custom_extract_expyfun_events
             )
+            # check for ERM / data file meas_date match
+            raw_meas_date = raw.info["meas_date"]
+            erm_meas_date = None
+            if custom_erm is not None:
+                erm_meas_date = custom_erm.info["meas_date"]
+            elif erm is not None:
+                erm_meas_date = erm.info["meas_date"]
+            if erm_meas_date is not None:
+                if erm_meas_date.date() != raw_meas_date.date():
+                    with open(erm_log, "a") as fid:
+                        msg = (
+                            f"meas_date mismatch between "
+                            f"{this_erm_file.name} ({erm_meas_date.date()})"
+                            f" and {raw_file.name} ({raw_meas_date.date()})\n"
+                        )
+                        fid.write(msg)
             # the offsets disambiguate the 3 different experiments. Not strictly
             # necessary, but helpful.
             events, orig_events = score_func(raw_file, offset=EVENT_OFFSETS[task_code])
@@ -163,7 +179,7 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                     subj,
                     session,
                     task_code,
-                    raw.info["meas_date"],
+                    raw_meas_date,
                     logfile=score_log,
                 )
                 if df is None:
