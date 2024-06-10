@@ -146,9 +146,9 @@ mapping.update(
         indir / "bad_310a" / "160112" / "bad_310_ids_raw.fif":
         outdir / "bad_310a" / "raw_fif" / "bad_310a_ids_raw.fif",
         # For this subj we need to keep both ERMs because MMN session was on different
-        # day than other sessions
+        # day than other sessions, so we name it "...mmn_erm..."
         indir / "bad_301b" / "160301" / "bad_301b_erm_raw.fif":
-        outdir / "bad_301b" / "raw_fif" / "bad_301b_erm_raw2.fif",
+        outdir / "bad_301b" / "raw_fif" / "bad_301b_mmn_erm_raw.fif",
         # CORRUPTED: `raw.fif` is corrupted and `raw2.fif` is good
         indir / "bad_208" / "151007" / "bad_208_ids_raw2.fif":
         outdir / "bad_208" / "raw_fif" / "bad_208_ids_raw.fif",

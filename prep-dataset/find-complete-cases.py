@@ -3,7 +3,7 @@ import pandas as pd
 df = pd.read_csv("qc/files-in-data.csv", header=0, index_col=0)
 
 complete_cases = (
-    df.drop(columns=["prebad", "ids", "erm"])
+    df.drop(columns=["ids", "erm"])
     .loc[df.session.isin(["a", "b"])]
     .groupby("subj")
     .all()

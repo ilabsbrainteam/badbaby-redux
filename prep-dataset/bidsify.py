@@ -68,10 +68,6 @@ for log in logs:
     with open(log, "w") as fid:
         pass
 
-# surrogate ERMs (same recording date)
-erm_df = pd.read_csv(outdir / "erm-surrogates.csv", index_col=False)
-erm_map = {need: have for _, (date, need, have) in erm_df.iterrows()}
-
 # bad/corrupt files
 with open(outdir.parent / "bad-files.yaml", "r") as fid:
     bad_files = yaml.load(fid, Loader=yaml.SafeLoader)
@@ -117,36 +113,49 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
     # find the ERM file
     erm_files = list(data_folder.glob("*_erm_raw.fif"))
     this_erm_file = None
-    if len(erm_files):
-        if len(erm_files) > 1:
-            with open(erm_log, "a") as fid:
-                fid.write(f"Found {len(erm_files)} ERM files for subj {full_subj}\n")
-        this_erm_file = erm_files[0]
-    if this_erm_file is None:
+    erm = None
+    # none found
+    if not len(erm_files):
         with open(erm_log, "a") as fid:
             fid.write(f"No ERM file found for subject {subj}\n")
-        erm = None
-    elif this_erm_file.name in bad_files:
-        with open(erm_log, "a") as fid:
-            fid.write(f"ERM file found for subject {subj}, but the file is corrupted\n")
-        erm = None
+    # more than one ERM
+    elif len(erm_files) > 1:
+        # use a default/fallback ERM filename for now
+        this_erm_file = erm_files[0].with_name(f"{full_subj}_erm_raw.fif")
+        assert this_erm_file in erm_files, erm_files
+    # only one ERM
     else:
-        erm = mne.io.read_raw_fif(this_erm_file, **read_raw_kw)
+        if erm_files[0].name in bad_files:
+            with open(erm_log, "a") as fid:
+                fid.write(
+                    f"ERM file found for subject {subj}, but the file is corrupted\n"
+                )
+        else:
+            erm = mne.io.read_raw_fif(erm_files[0], **read_raw_kw)
 
     # classify the raw files by task, and write them to the BIDS folder
     for raw_file in data_folder.iterdir():
         custom_erm = None
         if raw_file.name in bad_files:
             continue
+        # TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
         # special case: MMN file recorded on different day than other runs, thus has
         # different ERM
-        if raw_file.name == "bad_301b_mmn_raw.fif":
-            erm_path = orig_data / "bad_301b" / "raw_fif" / "bad_301b_erm_raw2.fif"
-            custom_erm = mne.io.read_raw_fif(erm_path, **read_raw_kw)
+        # if raw_file.name == "bad_301b_mmn_raw.fif":
+        #     erm_path = orig_data / "bad_301b" / "raw_fif" / "bad_301b_mmn_erm_raw.fif"
+        #     custom_erm = mne.io.read_raw_fif(erm_path, **read_raw_kw)
+        # TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
         # loop over experimental tasks
         for task_code, task_name in tasks.items():
             if task_code not in raw_file.name:
                 continue
+            # load the (experiment-specific) ERM
+            if this_erm_file is not None:
+                specific_erm = list(filter(lambda f: task_code in f.name, erm_files))
+                assert len(specific_erm) in (0, 1)
+                if len(specific_erm):
+                    this_erm_file = specific_erm[0]
+                erm = mne.io.read_raw_fif(this_erm_file, **read_raw_kw)
             # load the data, then re-write it in the BIDS folder tree
             raw = mne.io.read_raw_fif(raw_file, **read_raw_kw)
             score_func = (

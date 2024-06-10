@@ -30,8 +30,8 @@ qc/files-in-data.csv qc/erm-missing-from-data.csv: qc/log-of-hardlinking.txt
 # - qc/summary-of-combined-data.txt
 # - qc/unexpected-files-of-combined-data.txt
 
-qc/files-in-local-data.csv: qc/log-of-hardlinking.txt
-	python catalog-data-completeness.py local
+# qc/files-in-local-data.csv: qc/log-of-hardlinking.txt
+# 	python catalog-data-completeness.py local
 # also generates:
 # - qc/erm-missing-from-local-data.csv
 # - qc/summary-of-local-data.txt
@@ -65,7 +65,7 @@ clean:
 docs:
 	@echo "No default recipe."
 
-all: qc/files-missing.txt qc/summary-after-linking-erms.txt qc/files-in-local-data.csv
+all: qc/files-missing.txt qc/summary-after-linking-erms.txt # qc/files-in-local-data.csv
 	@echo "Regenerated everything. Check:"; \
 	echo "    qc/summary-after-linking-erms.txt"; \
 	echo "    qc/unexpected-files-after-linking-erms.txt"; \

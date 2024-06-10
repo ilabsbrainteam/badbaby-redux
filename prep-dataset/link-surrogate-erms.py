@@ -16,5 +16,13 @@ for _, row in df.iterrows():
     else:
         source = root / ".." / "extra-data" / donor_file
     recip = row["recipient"]
-    target = root / recip / "raw_fif" / f"{recip}_erm_raw.fif"
+    target_dir = root / f"bad_{recip}" / "raw_fif"
+    already_has_erm = bool(len(list(target_dir.glob("*erm_raw.fif"))))
+    needs_multiple_erms = (
+        len(df.groupby("recipient").get_group(recip)["date"].unique()) > 1
+    )
+    if already_has_erm or needs_multiple_erms:
+        target = target_dir / f"bad_{recip}_{row['exp']}_erm_raw.fif"
+    else:
+        target = target_dir / f"bad_{recip}_erm_raw.fif"
     run(["cp", "-ln", "--preserve=all", str(source), str(target)])

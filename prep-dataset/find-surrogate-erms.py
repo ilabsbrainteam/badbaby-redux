@@ -1,13 +1,15 @@
 import re
 from collections import defaultdict
 from contextlib import redirect_stdout
+from datetime import date
 from io import StringIO
 from pathlib import Path
 from shutil import copyfileobj
 
 import numpy as np
-from mne.utils import set_log_level
+import pandas as pd
 from mne.io import read_info
+from mne.utils import set_log_level
 
 # config
 set_log_level("WARNING")
@@ -31,10 +33,9 @@ logfile = StringIO()
 add_to_log = redirect_stdout(logfile)
 
 # load the list of subj-sessions that are missing ERMs
-with open(outdir / "erm-missing-from-data.csv", "r") as fid:
-    missing_erms = fid.readlines()
-missing_erms = [f"bad_{x.strip()}" for x in missing_erms]
-
+missing_erms = pd.read_csv(
+    outdir / "erm-missing-from-data.csv", header=0, index_col=False
+)
 
 available_erms = defaultdict(list)
 pattern = r".*_erm(_raw)?.fif$"
@@ -52,22 +53,22 @@ for _fname in (root / "extra-data").iterdir():
         scan_date = get_meas_date(_fname)
         available_erms[scan_date].append(_fname)
 
-matched_erm_dates = ["date,recipient,donor"]
+matched_erm_dates = list()
 missing_erm_dates = list()
 
 # look for date matches for sessions missing ERMs
-for subj_id in missing_erms:
-    target_date = None
-    # assume all recordings for a "session" are from the same day
-    for _fname in (ermsource / subj_id / "raw_fif").glob("*.fif"):
-        target_date = get_meas_date(_fname)
-        break
-    assert target_date is not None, target_date
+for _, (subj_id, exp, target_date) in missing_erms.iterrows():
+    target_date = date.fromisoformat(target_date)
     if target_date in available_erms:
         matching_erm = available_erms[target_date][0].name
         with add_to_log:
             print(f"using {matching_erm} (same-day) as surrogate ERM for {subj_id}")
-        matched_erm_dates.append(f"{target_date},{subj_id},{matching_erm}")
+        matched_erm_dates.append(
+            pd.DataFrame(
+                dict(date=target_date, recipient=subj_id, exp=exp, donor=matching_erm),
+                index=[0],
+            )
+        )
     else:
         available_erm_dates = np.array(list(available_erms))
         diffs = available_erm_dates - target_date
@@ -78,7 +79,12 @@ for subj_id in missing_erms:
         _s = "s" if n_days > 1 else ""
         bef_aft = "before" if np.sign(timedelta.days) < 0 else "after"
         if n_days <= erm_days_threshold:
-            matched_erm_dates.append(f"{target_date},{subj_id},{nearest}")
+            matched_erm_dates.append(
+                pd.DataFrame(
+                    dict(date=target_date, recipient=subj_id, exp=exp, donor=nearest),
+                    index=[0],
+                )
+            )
             with add_to_log:
                 print(
                     f"using {nearest} ({n_days} day{_s} {bef_aft}) "
@@ -93,6 +99,10 @@ for subj_id in missing_erms:
                 )
             missing_erm_dates.append(target_date)
 
+matched_erm_dates = pd.concat(matched_erm_dates, ignore_index=True)
+matched_erm_dates.sort_values(["recipient", "exp"], inplace=True)
+matched_erm_dates.to_csv(outdir / "erm-surrogates.csv", index=False, header=True)
+
 with open(outdir / "log-of-surrogate-erms.txt", "w") as fid:
     logfile.seek(0)
     copyfileobj(logfile, fid)
@@ -102,7 +112,3 @@ missing_erm_dates = list(map(str, sorted(missing_erm_dates)))
 with open(outdir / "erm-missing-dates.txt", "w") as fid:
     for _date in missing_erm_dates:
         fid.write(f"{_date}\n")
-
-with open(outdir / "erm-surrogates.csv", "w") as fid:
-    for line in matched_erm_dates:
-        fid.write(f"{line}\n")

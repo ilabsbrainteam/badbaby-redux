@@ -24,13 +24,6 @@ outdir.mkdir(exist_ok=True)
 logfile = StringIO()
 add_to_log = redirect_stdout(logfile)
 
-# first link all prebad.txt files (those don't exist on server, only local)
-indir = root / "local-data"
-prebads = indir.rglob("bad_*_prebad.txt")
-for source in prebads:
-    target = root / "data" / source.relative_to(indir)
-    hardlink(source, target, dry_run)
-
 # read in source → target mappings from the `select-files-from-*.py` scripts
 with open("files-from-local.yaml", "r") as fid:
     local_files = yaml.load(fid, Loader=yaml.SafeLoader)
