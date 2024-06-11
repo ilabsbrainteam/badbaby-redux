@@ -2,4 +2,5 @@
 # replacements or surrogates
 [
   bad_202_ids_raw.fif,  # ValueError: No raw data in bad_202_ids_raw.fif
+  bad_212_am_raw.fif,   # triggers are all messed up (only 9 events, no 1-triggers, etc)
 ]

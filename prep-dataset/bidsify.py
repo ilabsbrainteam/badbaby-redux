@@ -43,12 +43,19 @@ filterwarnings(
     message="The behavior of DataFrame concatenation with empty or all-NA entries is",
     category=FutureWarning,
 )
-# elevate SciPy warning so we can catch and handle it
+# escalate SciPy warning so we can catch and handle it
 filterwarnings(
     action="error",
     message="invalid value encountered in scalar divide",
     category=RuntimeWarning,
     module="scipy",
+)
+# escalate MNE-BIDS warning (we don't want to miss these)
+filterwarnings(
+    action="error",
+    message="No events found or provided",
+    category=RuntimeWarning,
+    module="mne_bids",
 )
 
 # path stuff
@@ -135,16 +142,10 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
 
     # classify the raw files by task, and write them to the BIDS folder
     for raw_file in data_folder.iterdir():
-        custom_erm = None
         if raw_file.name in bad_files:
             continue
-        # TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
-        # special case: MMN file recorded on different day than other runs, thus has
-        # different ERM
-        # if raw_file.name == "bad_301b_mmn_raw.fif":
-        #     erm_path = orig_data / "bad_301b" / "raw_fif" / "bad_301b_mmn_erm_raw.fif"
-        #     custom_erm = mne.io.read_raw_fif(erm_path, **read_raw_kw)
-        # TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
+        if "_erm_" in raw_file.name:
+            continue
         # loop over experimental tasks
         for task_code, task_name in tasks.items():
             if task_code not in raw_file.name:
@@ -165,12 +166,8 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
             )
             # check for ERM / data file meas_date match
             raw_meas_date = raw.info["meas_date"]
-            erm_meas_date = None
-            if custom_erm is not None:
-                erm_meas_date = custom_erm.info["meas_date"]
-            elif erm is not None:
+            if erm is not None:
                 erm_meas_date = erm.info["meas_date"]
-            if erm_meas_date is not None:
                 if erm_meas_date.date() != raw_meas_date.date():
                     with open(erm_log, "a") as fid:
                         msg = (
@@ -201,10 +198,12 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                 events=events,
                 event_id=event_mappings[task_code] | generic_events,
                 bids_path=bids_path,
-                empty_room=custom_erm or erm,
+                empty_room=erm,
                 overwrite=True,
             )
-            print(f"{subj} {session} {task_code: >3} completed")
+            print(
+                f"{subj} {session} {task_code: >3} completed ({len(events): >3} events)"
+            )
 
 if verify_events_against_tab_files:
     df.to_csv(outdir / "log-of-fif-to-tab-matches.csv")
