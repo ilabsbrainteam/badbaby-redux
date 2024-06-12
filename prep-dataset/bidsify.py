@@ -125,20 +125,18 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
     if not len(erm_files):
         with open(erm_log, "a") as fid:
             fid.write(f"No ERM file found for subject {subj}\n")
-    # more than one ERM
+    # if more than one ERM found, use default ERM filename until we know the `task_code`
     elif len(erm_files) > 1:
-        # use a default/fallback ERM filename for now
         this_erm_file = erm_files[0].with_name(f"{full_subj}_erm_raw.fif")
         assert this_erm_file in erm_files, erm_files
-    # only one ERM
+    # only one ERM for all exps (i.e. the typical case; all run on one day)
     else:
-        if erm_files[0].name in bad_files:
+        this_erm_file = erm_files[0]
+        if this_erm_file.name in bad_files:
             with open(erm_log, "a") as fid:
                 fid.write(
                     f"ERM file found for subject {subj}, but the file is corrupted\n"
                 )
-        else:
-            erm = mne.io.read_raw_fif(erm_files[0], **read_raw_kw)
 
     # classify the raw files by task, and write them to the BIDS folder
     for raw_file in data_folder.iterdir():
@@ -150,7 +148,7 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
         for task_code, task_name in tasks.items():
             if task_code not in raw_file.name:
                 continue
-            # load the (experiment-specific) ERM
+            # load the (possibly experiment-specific) ERM
             if this_erm_file is not None:
                 specific_erm = list(filter(lambda f: task_code in f.name, erm_files))
                 assert len(specific_erm) in (0, 1)
