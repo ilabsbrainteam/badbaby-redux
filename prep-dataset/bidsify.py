@@ -8,6 +8,8 @@ import pandas as pd
 import yaml
 from mne_bids import (
     BIDSPath,
+    get_anat_landmarks,
+    write_anat,
     write_meg_calibration,
     write_meg_crosstalk,
     write_raw_bids,
@@ -63,6 +65,7 @@ root = Path("/storage/badbaby-redux").resolve()
 orig_data = root / "data"
 bids_root = root / "bids-data"
 cal_dir = root / "calibration"
+mri_dir = root / "anat"
 outdir = root / "prep-dataset" / "qc"
 
 bids_path = BIDSPath(root=bids_root, datatype="meg", suffix="meg", extension=".fif")
@@ -117,6 +120,11 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
     write_meg_calibration(cal_dir / "sss_cal.dat", bids_path=bids_path)
     write_meg_crosstalk(cal_dir / "ct_sparse.fif", bids_path=bids_path)
 
+    # we write MRI once per subj, but we need a raw file loaded in order to properly
+    # write the `trans` information. So we use a signal variable here to avoid doing
+    # it twice
+    already_wrote_anat = False
+
     # find the ERM file
     erm_files = list(data_folder.glob("*_erm_raw.fif"))
     this_erm_file = None
@@ -155,13 +163,8 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                 if len(specific_erm):
                     this_erm_file = specific_erm[0]
                 erm = mne.io.read_raw_fif(this_erm_file, **read_raw_kw)
-            # load the data, then re-write it in the BIDS folder tree
+            # load the data
             raw = mne.io.read_raw_fif(raw_file, **read_raw_kw)
-            score_func = (
-                parse_mmn_events
-                if task_code == "mmn"
-                else custom_extract_expyfun_events
-            )
             # check for ERM / data file meas_date match
             raw_meas_date = raw.info["meas_date"]
             if erm is not None:
@@ -174,22 +177,22 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                             f" and {raw_file.name} ({raw_meas_date.date()})\n"
                         )
                         fid.write(msg)
-            # the offsets disambiguate the 3 different experiments. Not strictly
-            # necessary, but helpful.
+            # parse the events from the STIM channels
+            score_func = (
+                parse_mmn_events
+                if task_code == "mmn"
+                else custom_extract_expyfun_events
+            )
             events, orig_events = score_func(raw_file, offset=EVENT_OFFSETS[task_code])
             if verify_events_against_tab_files:
                 this_df = find_matching_tabs(
-                    events,
-                    subj,
-                    session,
-                    task_code,
-                    raw_meas_date,
-                    logfile=score_log,
+                    events, subj, session, task_code, raw_meas_date, logfile=score_log
                 )
                 if df is None:
                     df = this_df
                 else:
                     df = pd.concat((df, this_df), axis="index", ignore_index=True)
+            # write the raw data in the BIDS folder tree
             bids_path.update(task=task_name)
             write_raw_bids(
                 raw=raw,
@@ -199,6 +202,23 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                 empty_room=erm,
                 overwrite=True,
             )
+            # write the (surrogate) MRI in the BIDS folder tree
+            if not already_wrote_anat:
+                trans = mne.read_trans(mri_dir / full_subj / f"{full_subj}-trans.fif")
+                t1_fname = mri_dir / full_subj / "mri" / "T1.mgz"
+                landmarks = get_anat_landmarks(
+                    image=t1_fname,
+                    info=raw.info,
+                    trans=trans,
+                    fs_subject=full_subj,
+                    fs_subjects_dir=mri_dir,
+                )
+                anat_path = BIDSPath(
+                    subject=subj, session=session, root=bids_root, suffix="T1w"
+                )
+                write_anat(image=t1_fname, bids_path=anat_path, landmarks=landmarks)
+                already_wrote_anat = True
+            # print progress message to terminal
             print(
                 f"{subj} {session} {task_code: >3} completed ({len(events): >3} events)"
             )
