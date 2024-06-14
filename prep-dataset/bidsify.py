@@ -68,6 +68,9 @@ cal_dir = root / "calibration"
 mri_dir = root / "anat"
 outdir = root / "prep-dataset" / "qc"
 
+with open(root / "metadata" / "daysback.yaml", "r") as fid:
+    DAYSBACK = yaml.safe_load(fid)
+
 bids_path = BIDSPath(root=bids_root, datatype="meg", suffix="meg", extension=".fif")
 
 # init logging (erase old log files)
@@ -197,6 +200,7 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                 event_id=event_mappings[task_code] | generic_events,
                 bids_path=bids_path,
                 empty_room=erm,
+                anonymize=dict(daysback=DAYSBACK),
                 overwrite=True,
             )
             # write the (surrogate) MRI in the BIDS folder tree
