@@ -115,15 +115,12 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
     # BIDS requires subj to be a string, but cast to int as a failsafe first
     subj = str(int(subj[:3]))
 
-    # write the fine-cal and crosstalk files (once per subject/session)
-    bids_path.update(session=session, subject=subj)
-    write_meg_calibration(cal_dir / "sss_cal.dat", bids_path=bids_path)
-    write_meg_crosstalk(cal_dir / "ct_sparse.fif", bids_path=bids_path)
-
-    # we write MRI once per subj, but we need a raw file loaded in order to properly
-    # write the `trans` information. So we use a signal variable here to avoid doing
-    # it twice
+    # we write MEG calibration files and MRI data once per subj, but (for MRI) we need a
+    # raw file loaded in order to properly write the `trans` information. For cal data,
+    # we write within the `task code` loop just in case some subject has no valid data
+    # files. For both cases, we use a signal variable to avoid writing more than once.
     already_wrote_anat = False
+    already_wrote_cal = False
 
     # find the ERM file
     erm_files = list(data_folder.glob("*_erm_raw.fif"))
@@ -218,6 +215,11 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                 )
                 write_anat(image=t1_fname, bids_path=anat_path, landmarks=landmarks)
                 already_wrote_anat = True
+            # write the fine-cal and crosstalk files (once per subject/session)
+            if not already_wrote_cal:
+                cal_path = BIDSPath(subject=subj, session=session, root=bids_root)
+                write_meg_calibration(cal_dir / "sss_cal.dat", bids_path=cal_path)
+                write_meg_crosstalk(cal_dir / "ct_sparse.fif", bids_path=cal_path)
             # print progress message to terminal
             print(
                 f"{subj} {session} {task_code: >3} completed ({len(events): >3} events)"
