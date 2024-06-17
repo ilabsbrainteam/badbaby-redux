@@ -24,7 +24,13 @@ nasion_shift_xyz = np.array([0, 0, 0.02])  # in meters!
 root = Path("/storage/badbaby-redux").resolve()
 subjects_dir = root / "anat"
 data_dir = root / "data"
+outdir = root / "prep-dataset" / "qc"
 subjects = sorted(path.name for path in data_dir.glob("bad_*"))
+
+# init logging (erase old log files)
+mri_log = outdir / "log-of-MRI-scaling-issues.txt"
+with open(mri_log, "w") as fid:
+    pass
 
 # ensure we have the surrogate MRI files downloaded (won't re-download if already there)
 surrogates = dict()
@@ -36,8 +42,8 @@ for age in surrogate_age_str:
 # load DOB data
 ages = pd.read_csv(root / "metadata" / "subj-dob.csv", header=0, index_col="subj")
 ages = ages.map(pd.to_datetime)
-age_zero = "duedate"  # duedate or dob
-avg_days_per_month = np.mean([28.25] + [30] * 4 + [31] * 7)
+gestational_or_birth = "gestational"  # gestational or birth
+days_per_month = np.mean([28.25] + [30] * 4 + [31] * 7)
 
 # generate the MRI config files for scaling surrogate MRI to individual
 # subject's digitization points. Then scale the MRI and make the BEM solution.
@@ -69,19 +75,35 @@ for subject in subjects:
         # is this a meas_date with only 1 task? If so it needs its own trans/coreg
         extra_session = len(meas_dates) > 1 and len(tasks) == 1
 
-        # get age in days at time of recording
-        age = (meas_date - ages.loc[int_subj, age_zero].date()).days
-        agestr = "{: >2}w {: >2}d".format(*divmod(age, 7))
+        # # TODO temporary hack to avoid re-running subjs when debugging
+        # sub = f"{subject}_{task}" if extra_session else subject
+        # if (subjects_dir / sub / "bem" / f"{sub}-5120-5120-5120-bem-sol.fif").exists():
+        #     continue
+        # # TODO end TODO
 
+        # get age in days at time of recording
+        age = (meas_date - ages.loc[int_subj, gestational_or_birth].date()).days
+        _2mo = 2 * days_per_month
+        _3mo = 3 * days_per_month
+        _6mo = 6 * days_per_month
+        _7mo = 7 * days_per_month
+        msg = (
+            f"{subject: <4} was {age} days ({gestational_or_birth} age) at recording "
+            "(expected {low}-{high} days)\n"
+        )
         # choose correct surrogate
         if subject.endswith("a"):
-            assert 2 * avg_days_per_month <= age <= 3 * avg_days_per_month, agestr
+            if not _2mo <= age <= _3mo:
+                with open(mri_log, "a") as fid:
+                    fid.write(msg.format(low=int(_2mo), high=int(np.ceil(_3mo))))
             surrogate = "ANTS3-0Months3T"
         elif subject.endswith("b"):
-            assert 6 * avg_days_per_month <= age <= 7 * avg_days_per_month, agestr
+            if not _6mo <= age <= _7mo:
+                with open(mri_log, "a") as fid:
+                    fid.write(msg.format(low=int(_6mo), high=int(np.ceil(_7mo))))
             surrogate = "ANTS6-0Months3T"
         else:
-            ix = np.argmin(np.abs(surrogate_age - age / avg_days_per_month))
+            ix = np.argmin(np.abs(surrogate_age - age / days_per_month))
             surrogate = surrogates[surrogate_age_str[ix]]
 
         # shift the nasion (needs info)
