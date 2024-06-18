@@ -84,24 +84,19 @@ for subject in subjects:
         # get age in days at time of recording
         age = (meas_date - ages.loc[int_subj, gestational_or_birth].date()).days
         _2mo = 2 * days_per_month
-        _3mo = 3 * days_per_month
         _6mo = 6 * days_per_month
-        _7mo = 7 * days_per_month
         msg = (
             f"{subject: <4} was {age} days ({gestational_or_birth} age) at recording "
             "(expected {low}-{high} days)\n"
         )
         # choose correct surrogate
-        if subject.endswith("a"):
-            if not _2mo <= age <= _3mo:
+        if subject[-1] in "ab":
+            surrogate = f"ANTS{3 if subject.endswith('a') else 6}-0Months3T"
+            target_age = _2mo if subject.endswith("a") else _6mo
+            lo, hi = np.array([-7, 7]) + target_age
+            if not lo <= age <= hi:
                 with open(mri_log, "a") as fid:
-                    fid.write(msg.format(low=int(_2mo), high=int(np.ceil(_3mo))))
-            surrogate = "ANTS3-0Months3T"
-        elif subject.endswith("b"):
-            if not _6mo <= age <= _7mo:
-                with open(mri_log, "a") as fid:
-                    fid.write(msg.format(low=int(_6mo), high=int(np.ceil(_7mo))))
-            surrogate = "ANTS6-0Months3T"
+                    fid.write(msg.format(low=int(lo), high=int(np.ceil(hi))))
         else:
             ix = np.argmin(np.abs(surrogate_age - age / days_per_month))
             surrogate = surrogates[surrogate_age_str[ix]]
