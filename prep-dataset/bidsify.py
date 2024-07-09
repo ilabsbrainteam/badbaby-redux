@@ -60,6 +60,8 @@ filterwarnings(
     module="mne_bids",
 )
 
+TEMP_RESTRICTED_SUBJS = ("116", "215")
+
 # path stuff
 root = Path("/storage/badbaby-redux").resolve()
 orig_data = root / "data"
@@ -117,6 +119,10 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
         session = "c"
     # BIDS requires subj to be a string, but cast to int as a failsafe first
     subj = str(int(subj[:3]))
+    # TODO TEMPORARY
+    if subj not in TEMP_RESTRICTED_SUBJS:
+        continue
+    # END TODO
 
     # we write MEG calibration files and MRI data once per subj, but (for MRI) we need a
     # raw file loaded in order to properly write the `trans` information. For cal data,
