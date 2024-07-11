@@ -13,7 +13,7 @@ mkdir -p $DESTDIR
 # --include='bad*_erm.fif'   keep (mis-named) _erm.fif
 # --exclude='*'              skip all other files
 
-rsync -rtvzm --partial --progress --delete --chown $USER:badbaby \
+rsync -rtvzm --partial --progress --delete --chown=${SUDO_USER:-$USER}:badbaby \
     --exclude='/bad_baby/' \
     --include='/bad_*/' \
     --exclude='/*/' \
@@ -23,7 +23,6 @@ rsync -rtvzm --partial --progress --delete --chown $USER:badbaby \
     --include='bad*_erm.fif' \
     --exclude='*' \
     /mnt/brainstudio/bad_baby/ $DESTDIR
-
 
 # this tells us that there aren't any prebad .txt files (only shows a few PNG, TIFF, PDF):
 # find /mnt/brainstudio/bad_baby -type f -wholename '/mnt/brainstudio/bad_baby/bad_*/**/*' | grep -v '.fif$'

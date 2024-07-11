@@ -1,13 +1,13 @@
-.PHONY: rsync-local rsync-server clean docs
+.PHONY: rsync-local rsync-server clean clean-bids docs
 
 .DEFAULT_GOAL := docs
 
 # GET DATA
 rsync-local:
-	sudo bash rsync-data-from-local-untitled-drive.sh
+	./rsync-data-from-local-untitled-drive.sh
 
 rsync-server:
-	bash rsync-data-from-server.sh
+	./rsync-data-from-server.sh
 
 
 # DECIDE WHICH DATA TO KEEP
@@ -61,6 +61,9 @@ qc/files-missing.txt: qc/files-in-data.csv
 clean:
 	rm -rf /storage/badbaby-redux/data/bad_*
 	rm -f qc/*
+
+clean-bids:
+	rm -r /storage/badbaby-redux/bids-data
 
 docs:
 	@echo "No default recipe."

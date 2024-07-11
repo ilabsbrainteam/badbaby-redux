@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-export DESTDIR=/storage/badbaby-redux/local-data
+DESTDIR=/storage/badbaby-redux/local-data
 mkdir -p $DESTDIR
 
 # --include='/bad_*a/'          keep all bad_NNNa folders
@@ -16,7 +16,7 @@ mkdir -p $DESTDIR
 # --include='bad*_prebad.txt'   keep prebads
 # --exclude='*'                 skip all other files
 
-rsync -rtvzm --partial --progress --delete --chown $USER:badbaby \
+sudo rsync -rtvzm --partial --progress --delete --chown=${SUDO_USER:-$USER}:badbaby \
     --include='/bad_*a/' \
     --include='/bad_*b/' \
     --exclude='/*/' \
