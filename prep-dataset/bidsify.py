@@ -123,6 +123,7 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
     if subj not in TEMP_RESTRICTED_SUBJS:
         continue
     # END TODO
+    bids_path.update(subject=subj)
 
     # we write MEG calibration files and MRI data once per subj, but (for MRI) we need a
     # raw file loaded in order to properly write the `trans` information. For cal data,
