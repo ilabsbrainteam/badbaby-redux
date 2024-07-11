@@ -130,15 +130,14 @@ for subject in subjects:
                 coreg.fit_icp(n_iterations=10)
                 n_pts = new_n_pts
 
-        # save the trans file and scale the MRI. Most subjs have all tasks on the same
-        # meas_date, so only specify task in filename if needed (like we did for ERM)
-        trans_fname = this_subj_dir / f"{subject}_trans.fif"
+        # Most subjs have all tasks on the same meas_date, so only specify task in
+        # filename if needed (like we did for ERM)
+        trans_fname = f"{subject}_trans.fif"
         subject_to = subject
         if extra_session:
-            trans_fname = this_subj_dir / f"{subject}_{task}_trans.fif"
+            trans_fname = f"{subject}_{task}_trans.fif"
             subject_to = f"{subject}_{task}"
-        mne.write_trans(trans_fname, coreg.trans, overwrite=True)
-        # this step takes a while
+        # scale the MRI (and save it to `subjects_dir`). This step takes a while.
         mne.scale_mri(
             subject_from=surrogate,
             subject_to=subject_to,
@@ -149,6 +148,9 @@ for subject in subjects:
             subjects_dir=subjects_dir,
             verbose=True,
         )
+        # save the trans file
+        trans_fpath = subjects_dir / subject_to / trans_fname
+        mne.write_trans(trans_fpath, coreg.trans, overwrite=True)
 
         # make BEM solution. We only need 1-layer, but the 6mo surrogate only has
         # 3-layer so let's use that for everyone
