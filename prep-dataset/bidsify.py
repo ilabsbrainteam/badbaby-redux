@@ -106,11 +106,9 @@ read_raw_kw = dict(allow_maxshield=True, preload=False)
 
 df = None
 
-# we write MEG calibration files and MRI data once per subj, but (for MRI) we need a
-# raw file loaded in order to properly write the `trans` information. For both
-# cases, we use a signal variable to avoid writing more than once.
-already_wrote_anat = dict()
-already_wrote_cal = dict()
+# we write MRI data once per subj, but we need a raw file loaded in order to properly
+# write the `trans` information. Use a signal variable to avoid writing more than once.
+last_anat_written = None
 
 # classify raw files by "task" from the filenames
 for data_folder in orig_data.rglob("bad_*/raw_fif/"):
@@ -169,6 +167,11 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                 if len(specific_erm):
                     this_erm_file = specific_erm[0]
                 erm = mne.io.read_raw_fif(this_erm_file, **read_raw_kw)
+            else:
+                with open(erm_log, "a") as fid:
+                    fid.write(
+                        f"Something went wrong finding ERM file for subject {subj}\n"
+                    )
             # load the data
             raw = mne.io.read_raw_fif(raw_file, **read_raw_kw)
             # check for ERM / data file meas_date match
@@ -210,7 +213,7 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                 overwrite=True,
             )
             # write the (surrogate) MRI in the BIDS folder tree
-            if not already_wrote_anat.get(subj):
+            if last_anat_written == subj:
                 trans = mne.read_trans(mri_dir / full_subj / f"{full_subj}_trans.fif")
                 t1_fname = mri_dir / full_subj / "mri" / "T1.mgz"
                 landmarks = get_anat_landmarks(
@@ -222,13 +225,11 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                 )
                 anat_path = BIDSPath(subject=subj, root=bids_root, suffix="T1w")
                 write_anat(image=t1_fname, bids_path=anat_path, landmarks=landmarks)
-                already_wrote_anat[subj] = True
-            # write the fine-cal and crosstalk files (once per subject)
-            if not already_wrote_cal.get(subj):
-                cal_path = BIDSPath(subject=subj, root=bids_root)
-                write_meg_calibration(cal_dir / "sss_cal.dat", bids_path=cal_path)
-                write_meg_crosstalk(cal_dir / "ct_sparse.fif", bids_path=cal_path)
-                already_wrote_cal[subj] = True
+                last_anat_written = subj
+            # write the fine-cal and crosstalk files (once per subject/session)
+            cal_path = BIDSPath(subject=subj, root=bids_root, session=session)
+            write_meg_calibration(cal_dir / "sss_cal.dat", bids_path=cal_path)
+            write_meg_crosstalk(cal_dir / "ct_sparse.fif", bids_path=cal_path)
             # print progress message to terminal
             print(
                 f"{subj} {session} {task_code: >3} completed ({len(events): >3} events)"
