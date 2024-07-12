@@ -106,6 +106,12 @@ read_raw_kw = dict(allow_maxshield=True, preload=False)
 
 df = None
 
+# we write MEG calibration files and MRI data once per subj, but (for MRI) we need a
+# raw file loaded in order to properly write the `trans` information. For both
+# cases, we use a signal variable to avoid writing more than once.
+already_wrote_anat = dict()
+already_wrote_cal = dict()
+
 # classify raw files by "task" from the filenames
 for data_folder in orig_data.rglob("bad_*/raw_fif/"):
     # extract the subject ID
@@ -123,14 +129,7 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
     if subj not in TEMP_RESTRICTED_SUBJS:
         continue
     # END TODO
-    bids_path.update(subject=subj)
-
-    # we write MEG calibration files and MRI data once per subj, but (for MRI) we need a
-    # raw file loaded in order to properly write the `trans` information. For cal data,
-    # we write within the `task code` loop just in case some subject has no valid data
-    # files. For both cases, we use a signal variable to avoid writing more than once.
-    already_wrote_anat = False
-    already_wrote_cal = False
+    bids_path.update(subject=subj, session=session)
 
     # find the ERM file
     erm_files = list(data_folder.glob("*_erm_raw.fif"))
@@ -211,8 +210,8 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                 overwrite=True,
             )
             # write the (surrogate) MRI in the BIDS folder tree
-            if not already_wrote_anat:
-                trans = mne.read_trans(mri_dir / full_subj / f"{full_subj}-trans.fif")
+            if not already_wrote_anat.get(subj):
+                trans = mne.read_trans(mri_dir / full_subj / f"{full_subj}_trans.fif")
                 t1_fname = mri_dir / full_subj / "mri" / "T1.mgz"
                 landmarks = get_anat_landmarks(
                     image=t1_fname,
@@ -221,16 +220,15 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                     fs_subject=full_subj,
                     fs_subjects_dir=mri_dir,
                 )
-                anat_path = BIDSPath(
-                    subject=subj, session=session, root=bids_root, suffix="T1w"
-                )
+                anat_path = BIDSPath(subject=subj, root=bids_root, suffix="T1w")
                 write_anat(image=t1_fname, bids_path=anat_path, landmarks=landmarks)
-                already_wrote_anat = True
-            # write the fine-cal and crosstalk files (once per subject/session)
-            if not already_wrote_cal:
-                cal_path = BIDSPath(subject=subj, session=session, root=bids_root)
+                already_wrote_anat[subj] = True
+            # write the fine-cal and crosstalk files (once per subject)
+            if not already_wrote_cal.get(subj):
+                cal_path = BIDSPath(subject=subj, root=bids_root)
                 write_meg_calibration(cal_dir / "sss_cal.dat", bids_path=cal_path)
                 write_meg_crosstalk(cal_dir / "ct_sparse.fif", bids_path=cal_path)
+                already_wrote_cal[subj] = True
             # print progress message to terminal
             print(
                 f"{subj} {session} {task_code: >3} completed ({len(events): >3} events)"
