@@ -2247,7 +2247,7 @@ noise_cov: (
 # variable) in the BIDS derivative root of the dataset.
 # """
 
-memory_subdir: str = ".mne_bids_pipeline_cache"
+# memory_subdir: str = "_cache"
 # """
 # The caching directory name to use if `memory_location` is `True`.
 # """
