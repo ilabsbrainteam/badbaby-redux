@@ -156,6 +156,9 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
             continue
         if "_erm_" in raw_file.name:
             continue
+        # in case someone was manually trying things out:
+        if "_tsss" in raw_file.name or "_pos" in raw_file.name:
+            continue
         # loop over experimental tasks
         for task_code, task_name in tasks.items():
             if task_code not in raw_file.name:
@@ -203,6 +206,7 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                     df = pd.concat((df, this_df), axis="index", ignore_index=True)
             # write the raw data in the BIDS folder tree
             bids_path.update(task=task_name)
+            assert erm is not None, bids_path
             write_raw_bids(
                 raw=raw,
                 events=events,
@@ -213,7 +217,7 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                 overwrite=True,
             )
             # write the (surrogate) MRI in the BIDS folder tree
-            if last_anat_written == subj:
+            if last_anat_written != (subj, session):
                 trans = mne.read_trans(mri_dir / full_subj / f"{full_subj}_trans.fif")
                 t1_fname = mri_dir / full_subj / "mri" / "T1.mgz"
                 landmarks = get_anat_landmarks(
@@ -223,9 +227,9 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                     fs_subject=full_subj,
                     fs_subjects_dir=mri_dir,
                 )
-                anat_path = BIDSPath(subject=subj, root=bids_root, suffix="T1w")
+                anat_path = BIDSPath(root=bids_root, subject=subj, session=session)
                 write_anat(image=t1_fname, bids_path=anat_path, landmarks=landmarks)
-                last_anat_written = subj
+                last_anat_written = (subj, session)
             # write the fine-cal and crosstalk files (once per subject/session)
             cal_path = BIDSPath(subject=subj, root=bids_root, session=session)
             write_meg_calibration(cal_dir / "sss_cal.dat", bids_path=cal_path)
