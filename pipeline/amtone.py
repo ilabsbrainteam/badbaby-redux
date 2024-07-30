@@ -6,12 +6,13 @@ from typing import Annotated, Any, Literal
 
 from annotated_types import Ge, Interval, Len, MinLen
 from mne import Covariance
+from mne.transforms import translation
 from mne_bids import BIDSPath
 
 from mne_bids_pipeline.typing import (
     #     ArbitraryContrast,
     #     DigMontageType,
-    #     FloatArrayLike,
+    FloatArrayLike,
     PathLike,
 )
 
@@ -241,7 +242,7 @@ data_type: Literal["meg", "eeg"] | None = "meg"
 #     ```
 # """
 
-# eog_channels: Sequence[str] | None = None  # TODO verify with maggie
+# eog_channels: Sequence[str] | None = None
 # """
 # Specify EOG channels to use, or create virtual EOG channels.
 
@@ -584,7 +585,7 @@ use_maxwell_filter: bool = True
 #     before applying Maxwell filter.
 # """
 
-mf_st_duration: float | None = 10.0  # TODO verify with maggie
+mf_st_duration: float | None = 6.0  # shorter because they move a lot
 # """
 # There are two kinds of Maxwell filtering: SSS (signal space separation) and
 # tSSS (temporal signal space separation)
@@ -615,7 +616,7 @@ mf_st_duration: float | None = 10.0  # TODO verify with maggie
 #     ```
 # """
 
-mf_st_correlation: float = 0.98  # TODO verify with maggie
+mf_st_correlation: float = 0.95  # TODO if bandpassed first, increase to 0.98
 # """
 # The correlation limit for spatio-temporal SSS (tSSS).
 
@@ -625,7 +626,7 @@ mf_st_correlation: float = 0.98  # TODO verify with maggie
 #     ```
 # """
 
-# mf_head_origin: Literal["auto"] | FloatArrayLike = "auto"  # TODO verify with maggie
+# mf_head_origin: Literal["auto"] | FloatArrayLike = "auto"
 # """
 # `mf_head_origin` : array-like, shape (3,) | 'auto'
 # Origin of internal and external multipolar moment space in meters.
@@ -640,7 +641,8 @@ mf_st_correlation: float = 0.98  # TODO verify with maggie
 #     ```
 # """
 
-# mf_destination: Literal["reference_run"] | FloatArrayLike = "reference_run"  # TODO verify with maggie
+# TODO check with eric about injecting the precomputed avg headpos as a numeric array here
+# mf_destination: Literal["reference_run"] | FloatArrayLike = translation(z=0.04)
 # """
 # Despite all possible care to avoid movements in the MEG, the participant
 # will likely slowly drift down from the Dewar or slightly shift the head
@@ -664,7 +666,7 @@ mf_st_correlation: float = 0.98  # TODO verify with maggie
 #    ```
 # """
 
-mf_int_order: int = 6  # TODO verify with maggie
+mf_int_order: int = 6
 # """
 # Internal order for the Maxwell basis. Can be set to something lower (e.g., 6
 # or higher for datasets where lower or higher spatial complexity, respectively,
@@ -712,7 +714,7 @@ mf_int_order: int = 6  # TODO verify with maggie
 #     ```
 # """  # noqa : E501
 
-# mf_esss: int = 0  # TODO verify with maggie
+# mf_esss: int = 0
 # """
 # Number of extended SSS (eSSS) basis projectors to use from empty-room data.
 # """
@@ -797,7 +799,7 @@ mf_mc_dist_limit: float = 0.01
 # Keep it `None` if no highpass filtering should be applied.
 # """
 
-h_freq: float | None = 75.0  # TODO verify with maggie (default is 40.)
+h_freq: float | None = 80.0
 # """
 # The high-frequency cut-off in the lowpass filtering step.
 # Keep it `None` if no lowpass filtering should be applied.
@@ -855,7 +857,7 @@ h_freq: float | None = 75.0  # TODO verify with maggie (default is 40.)
 # resample your data down to 500 Hz without preventing reliable time-frequency
 # exploration of your data.
 
-# raw_resample_sfreq: float | None = None  # TODO verify with maggie
+# raw_resample_sfreq: float | None = None
 # """
 # Specifies at which sampling frequency the data should be resampled.
 # If `None`, then no resampling will be done.
@@ -1135,7 +1137,7 @@ conditions: Sequence[str] | dict[str, str] | None = ["amtone"]
 #     ```
 # """  # noqa: E501
 
-spatial_filter: Literal["ssp", "ica"] | None = "ssp"  # TODO verify with maggie
+spatial_filter: Literal["ssp", "ica"] | None = "ica"
 # """
 # Whether to use a spatial filter to detect and remove artifacts. The BIDS
 # Pipeline offers the use of signal-space projection (SSP) and independent
