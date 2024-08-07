@@ -8,8 +8,8 @@ import pandas as pd
 import yaml
 from mne_bids import (
     BIDSPath,
-    get_anat_landmarks,
-    write_anat,
+    # get_anat_landmarks,
+    # write_anat,
     write_meg_calibration,
     write_meg_crosstalk,
     write_raw_bids,
@@ -20,6 +20,8 @@ from score import (
     find_matching_tabs,
     parse_mmn_events,
 )
+
+from utils import hardlink
 
 verify_events_against_tab_files = True
 
@@ -216,22 +218,36 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                 anonymize=dict(daysback=DAYSBACK),
                 overwrite=True,
             )
-            # write the (surrogate) MRI in the BIDS folder tree
+            # write the (surrogate) MRI in the BIDS derivatives tree
             if last_anat_written != (subj, session):
-                trans = mne.read_trans(mri_dir / full_subj / f"{full_subj}_trans.fif")
+                # trans = mne.read_trans(mri_dir / full_subj / f"{full_subj}_trans.fif")
                 t1_fname = mri_dir / full_subj / "mri" / "T1.mgz"
-                landmarks = get_anat_landmarks(
-                    image=t1_fname,
-                    info=raw.info,
-                    trans=trans,
-                    fs_subject=full_subj,
-                    fs_subjects_dir=mri_dir,
+                anat_path = (
+                    bids_root
+                    / "derivatives"
+                    / "freesurfer"
+                    / "subjects"
+                    / f"sub-{subj}"
+                    / f"ses-{session}"
                 )
-                anat_path = BIDSPath(root=bids_root, subject=subj, session=session)
-                write_anat(image=t1_fname, bids_path=anat_path, landmarks=landmarks)
+                # handle cases where one task was done on a different day
+                if len(full_subj.split("_")) > 2:
+                    anat_path = anat_path.with_name(f"ses-{session}_task-{task_code}")
+                for dirpath, dirnames, filenames in (mri_dir / full_subj).walk():
+                    for dirname in dirnames:
+                        (anat_path / dirname).mkdir(parents=True, exist_ok=True)
+                    for fname in filenames:
+                        target = (
+                            anat_path / dirpath.relative_to(mri_dir / full_subj) / fname
+                        )
+                        if fname.endswith("_trans.fif"):
+                            target = target.with_name(
+                                f"sub-{subj}_{anat_path.name}_trans.fif"
+                            )
+                        hardlink(source=dirpath / fname, target=target, dry_run=False)
                 last_anat_written = (subj, session)
             # write the fine-cal and crosstalk files (once per subject/session)
-            cal_path = BIDSPath(subject=subj, root=bids_root, session=session)
+            cal_path = BIDSPath(root=bids_root, subject=subj, session=session)
             write_meg_calibration(cal_dir / "sss_cal.dat", bids_path=cal_path)
             write_meg_crosstalk(cal_dir / "ct_sparse.fif", bids_path=cal_path)
             # print progress message to terminal

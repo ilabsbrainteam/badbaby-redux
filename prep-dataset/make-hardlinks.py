@@ -5,15 +5,7 @@ from shutil import copyfileobj
 from subprocess import run
 import yaml
 
-
-def hardlink(source, target, dry_run=True):
-    """Create target dirs, then hardlink."""
-    target.parent.mkdir(parents=True, exist_ok=True)
-    # even with sudo `--preserve=all` doesn't work, so chown too
-    cmd = ["cp", "-ln", "--preserve=all", str(source), str(target)]
-    if not dry_run:
-        run(cmd)
-
+from utils import hardlink
 
 dry_run = False
 root = Path("/storage/badbaby-redux").resolve()
