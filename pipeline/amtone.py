@@ -33,7 +33,7 @@ bids_root: PathLike | None = root / "bids-data"
 #     ```
 # """
 
-deriv_root: PathLike | None = None
+# deriv_root: PathLike | None = None
 # """
 # The root of the derivatives directory in which the pipeline will store
 # the processing results. If `None`, this will be
@@ -44,7 +44,7 @@ deriv_root: PathLike | None = None
 #     set [`subjects_dir`][mne_bids_pipeline._config.subjects_dir] as well.
 # """
 
-subjects_dir: PathLike | None = root / "anat"
+# subjects_dir: PathLike | None = root / "anat"
 # """
 # Path to the directory that contains the FreeSurfer reconstructions of all
 # subjects. Specifically, this defines the `SUBJECTS_DIR` that is used by
@@ -799,7 +799,7 @@ mf_mc_dist_limit: float = 0.01
 # Keep it `None` if no highpass filtering should be applied.
 # """
 
-h_freq: float | None = 80.0
+h_freq: float | None = 55.0
 # """
 # The high-frequency cut-off in the lowpass filtering step.
 # Keep it `None` if no lowpass filtering should be applied.
@@ -857,7 +857,7 @@ h_freq: float | None = 80.0
 # resample your data down to 500 Hz without preventing reliable time-frequency
 # exploration of your data.
 
-# raw_resample_sfreq: float | None = None
+raw_resample_sfreq: float | None = 600
 # """
 # Specifies at which sampling frequency the data should be resampled.
 # If `None`, then no resampling will be done.
