@@ -9,6 +9,7 @@ import yaml
 from mne_bids import (
     BIDSPath,
     # get_anat_landmarks,
+    mark_channels,
     # write_anat,
     write_meg_calibration,
     write_meg_crosstalk,
@@ -21,7 +22,7 @@ from score import (
     parse_mmn_events,
 )
 
-from utils import hardlink
+from utils import hardlink, load_prebads
 
 verify_events_against_tab_files = True
 
@@ -161,6 +162,9 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
         # in case someone was manually trying things out:
         if "_tsss" in raw_file.name or "_pos" in raw_file.name:
             continue
+        # don't try to read prebads as FIFF files. We'll open them separately later
+        if raw_file.name.endswith("prebad.txt"):
+            continue
         # loop over experimental tasks
         for task_code, task_name in tasks.items():
             if task_code not in raw_file.name:
@@ -172,6 +176,9 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                 if len(specific_erm):
                     this_erm_file = specific_erm[0]
                 erm = mne.io.read_raw_fif(this_erm_file, **read_raw_kw)
+                # load the ERM prebads (if present)
+                prebad_fname = data_folder / f"{full_subj}_erm_prebad.txt"
+                erm_prebads = load_prebads(prebad_fname)
             else:
                 with open(erm_log, "a") as fid:
                     fid.write(
@@ -206,6 +213,9 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                     df = this_df
                 else:
                     df = pd.concat((df, this_df), axis="index", ignore_index=True)
+            # load the experimental data prebads (if present)
+            prebad_fname = data_folder / f"{full_subj}_{task_code}_prebad.txt"
+            prebads = load_prebads(prebad_fname)
             # write the raw data in the BIDS folder tree
             bids_path.update(task=task_name)
             assert erm is not None, bids_path
@@ -218,6 +228,13 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                 anonymize=dict(daysback=DAYSBACK),
                 overwrite=True,
             )
+            # write the prebads
+            if prebads:
+                mark_channels(bids_path=bids_path, ch_names=prebads, status="bad")
+            if erm_prebads:
+                mark_channels(
+                    bids_path=this_erm_file, ch_names=erm_prebads, status="bad"
+                )
             # write the (surrogate) MRI in the BIDS derivatives tree
             if last_anat_written != (subj, session):
                 # trans = mne.read_trans(mri_dir / full_subj / f"{full_subj}_trans.fif")
