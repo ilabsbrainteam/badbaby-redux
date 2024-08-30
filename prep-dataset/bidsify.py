@@ -8,8 +8,8 @@ import pandas as pd
 import yaml
 from mne_bids import (
     BIDSPath,
-    # get_anat_landmarks,
-    # write_anat,
+    get_anat_landmarks,
+    write_anat,
     write_meg_calibration,
     write_meg_crosstalk,
     write_raw_bids,
@@ -218,35 +218,54 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                 anonymize=dict(daysback=DAYSBACK),
                 overwrite=True,
             )
-            # write the (surrogate) MRI in the BIDS derivatives tree
+            # write the (surrogate) MRI in the BIDS derivatives tree. Since we have
+            # separate MRIs for different sessions (they're months apart, and these are
+            # infants), we need to rename the subject folder (and some of the files) to
+            # use a compound "subject" name like `sub-XXX_ses-Y`
             anat_to_write = (subj, session)
+            compound_subj_name = f"sub-{subj}_ses-{session}"
             if last_anat_written != anat_to_write:
-                # trans = mne.read_trans(mri_dir / full_subj / f"{full_subj}_trans.fif")
-                t1_fname = mri_dir / full_subj / "mri" / "T1.mgz"
                 anat_path = (
                     bids_root
                     / "derivatives"
                     / "freesurfer"
                     / "subjects"
-                    / f"sub-{subj}"
-                    / f"ses-{session}"
+                    / compound_subj_name
                 )
                 # handle cases where one task was done on a different day
                 if len(full_subj.split("_")) > 2:
-                    anat_path = anat_path.with_name(f"ses-{session}_task-{task_code}")
+                    compound_subj_name = f"{compound_subj_name}_task-{task_code}"
+                    anat_path = anat_path.with_name(compound_subj_name)
                     anat_to_write = (*anat_to_write, task_code)
                 for dirpath, dirnames, filenames in (mri_dir / full_subj).walk():
                     for dirname in dirnames:
-                        (anat_path / dirname).mkdir(parents=True, exist_ok=True)
+                        # adjust "subject" name when it's the foldername
+                        dirname_out = dirname.replace(full_subj, compound_subj_name)
+                        (anat_path / dirname_out).mkdir(parents=True, exist_ok=True)
                     for fname in filenames:
+                        # adjust "subject" name when it's incorporated into filenames
+                        # (e.g. for the trans- and BEM files)
+                        fname_out = fname.replace(full_subj, compound_subj_name)
                         target = (
-                            anat_path / dirpath.relative_to(mri_dir / full_subj) / fname
+                            anat_path
+                            / dirpath.relative_to(mri_dir / full_subj)
+                            / fname_out
                         )
-                        if fname.endswith("_trans.fif"):
-                            target = target.with_name(
-                                f"sub-{subj}_{anat_path.name}_trans.fif"
-                            )
                         hardlink(source=dirpath / fname, target=target, dry_run=False)
+                # now use MNE-BIDS to (re)write the T1, so we can get the side
+                # effect of converting the trans file to a JSON sidecar
+                t1_fname = mri_dir / full_subj / "mri" / "T1.mgz"
+                trans = mne.read_trans(anat_path / f"{compound_subj_name}_trans.fif")
+                landmarks = get_anat_landmarks(
+                    image=t1_fname,
+                    info=raw.info,
+                    trans=trans,
+                    fs_subject=compound_subj_name,
+                    fs_subjects_dir=anat_path.parent,
+                )
+                mri_path = BIDSPath(root=bids_root, subject=subj, session=session)
+                write_anat(image=t1_fname, bids_path=mri_path, landmarks=landmarks)
+                # update our signal variable
                 last_anat_written = anat_to_write
             # write the fine-cal and crosstalk files (once per subject/session)
             cal_path = BIDSPath(root=bids_root, subject=subj, session=session)

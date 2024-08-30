@@ -44,7 +44,7 @@ bids_root: PathLike | None = root / "bids-data"
 #     set [`subjects_dir`][mne_bids_pipeline._config.subjects_dir] as well.
 # """
 
-# subjects_dir: PathLike | None = root / "anat"
+subjects_dir: PathLike | None = bids_root / "derivatives" / "freesurfer" / "subjects"
 # """
 # Path to the directory that contains the FreeSurfer reconstructions of all
 # subjects. Specifically, this defines the `SUBJECTS_DIR` that is used by
@@ -1999,7 +1999,7 @@ spatial_filter: Literal["ssp", "ica"] | None = "ica"
 #     ```
 # """
 
-# spacing: Literal["oct5", "oct6", "ico4", "ico5", "all"] | int = "oct6"
+spacing: Literal["oct5", "oct6", "ico4", "ico5", "all"] | int = "ico4"
 # """
 # The spacing to use. Can be `'ico#'` for a recursively subdivided
 # icosahedron, `'oct#'` for a recursively subdivided octahedron,
