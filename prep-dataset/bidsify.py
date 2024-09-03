@@ -202,7 +202,8 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                     df = pd.concat((df, this_df), axis="index", ignore_index=True)
             # write the raw data in the BIDS folder tree
             bids_path.update(task=task_name)
-            assert erm is not None, bids_path
+            if session in ("a", "b"):
+                assert erm is not None, bids_path
             write_raw_bids(
                 raw=raw,
                 events=events,
@@ -258,7 +259,11 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                     fs_subjects_dir=anat_path.parent,
                 )
                 mri_path = BIDSPath(root=bids_root, subject=subj, session=session)
-                write_anat(image=t1_fname, bids_path=mri_path, landmarks=landmarks)
+                nii_file = write_anat(
+                    image=t1_fname, bids_path=mri_path, landmarks=landmarks
+                )
+                # we don't actually need the nii.gz file, just the JSON sidecar
+                Path(nii_file).unlink()
                 # update our signal variable
                 last_anat_written = anat_to_write
             # write the fine-cal and crosstalk files (once per subject/session)
