@@ -141,7 +141,7 @@ task: str = "AmplitudeModulatedTones"
 # The BIDS `space` entity.
 # """
 
-subjects: Sequence[str] | Literal["all"] = ["116", "119", "215"]
+subjects: Sequence[str] | Literal["all"] = "all"  # ["116", "119", "215"]
 # """
 # Subjects to analyze. If `'all'`, include all subjects. To only
 # include a subset of subjects, pass a list of their identifiers. Even
