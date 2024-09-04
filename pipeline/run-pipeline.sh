@@ -3,7 +3,7 @@ set -euf -o pipefail
 
 if [ $# -ne 2 ]
 then
-    echo "USAGE: piperun.sh EXPERIMENT_NAME PREPOST"
+    echo "USAGE: run-pipeline.sh EXPERIMENT_NAME PREPOST"
     echo "    allowed values for EXPERIMENT_NAME:"
     echo "        am, mmn, ids"
     echo "    allowed values for PREPOST:"
