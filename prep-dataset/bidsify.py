@@ -125,26 +125,8 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
     subj = str(int(subj[:3]))
     bids_path.update(subject=subj, session=session)
 
-    # find the ERM file
+    # look for ERM files
     erm_files = list(data_folder.glob("*_erm_raw.fif"))
-    this_erm_file = None
-    erm = None
-    # none found
-    if not len(erm_files):
-        with open(erm_log, "a") as fid:
-            fid.write(f"No ERM file found for subject {subj}\n")
-    # if more than one ERM found, use default ERM filename until we know the `task_code`
-    elif len(erm_files) > 1:
-        this_erm_file = erm_files[0].with_name(f"{full_subj}_erm_raw.fif")
-        assert this_erm_file in erm_files, erm_files
-    # only one ERM for all exps (i.e. the typical case; all run on one day)
-    else:
-        this_erm_file = erm_files[0]
-        if this_erm_file.name in bad_files:
-            with open(erm_log, "a") as fid:
-                fid.write(
-                    f"ERM file found for subject {subj}, but the file is corrupted\n"
-                )
 
     # classify the raw files by task, and write them to the BIDS folder
     for raw_file in data_folder.iterdir():
@@ -159,30 +141,43 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
         for task_code, task_name in tasks.items():
             if task_code not in raw_file.name:
                 continue
-            # load the (possibly experiment-specific) ERM
-            if this_erm_file is not None:
-                specific_erm = list(filter(lambda f: task_code in f.name, erm_files))
-                assert len(specific_erm) in (0, 1)
-                if len(specific_erm):
-                    this_erm_file = specific_erm[0]
-                erm = mne.io.read_raw_fif(this_erm_file, **read_raw_kw)
-            else:
-                with open(erm_log, "a") as fid:
-                    fid.write(
-                        f"Something went wrong finding ERM file for subject {subj}\n"
-                    )
             # load the data
             raw = mne.io.read_raw_fif(raw_file, **read_raw_kw)
+            # check for experiment-specific ERM file
+            task_specific_erm = list(filter(lambda f: task_code in f.name, erm_files))
+            assert len(task_specific_erm) in (0, 1)
+            if task_specific_erm:
+                erm_file = task_specific_erm[0]
+            # only one ERM for all tasks (i.e. the typical case; all on one day)
+            elif erm_files:
+                erm_file = erm_files[0].with_name(f"{full_subj}_erm_raw.fif")
+                assert erm_file in erm_files, erm_files
+            # no ERM file found
+            else:
+                with open(erm_log, "a") as fid:
+                    fid.write(f"No ERM file found for {full_subj} {task_code}\n")
+                erm_file = None
+                erm = None
             # check for ERM / data file meas_date match
             raw_meas_date = raw.info["meas_date"]
-            if erm is not None:
+            if erm_file:
+                # make sure we're not hit by a bad file
+                if erm_file.name in bad_files:
+                    with open(erm_log, "a") as fid:
+                        fid.write(
+                            f"ERM file found for {full_subj} {task_code}, "
+                            f"but the file ({erm_file.name}) is corrupted\n"
+                        )
+                    break
+                # load the (possibly experiment-specific) ERM
+                erm = mne.io.read_raw_fif(erm_file, **read_raw_kw)
                 erm_meas_date = erm.info["meas_date"]
                 if erm_meas_date.date() != raw_meas_date.date():
                     with open(erm_log, "a") as fid:
                         msg = (
-                            f"meas_date mismatch between "
-                            f"{this_erm_file.name} ({erm_meas_date.date()})"
-                            f" and {raw_file.name} ({raw_meas_date.date()})\n"
+                            f"meas_date mismatch: {erm_file.name} "
+                            f"({erm_meas_date.date()}) vs. {raw_file.name} "
+                            f"({raw_meas_date.date()})\n"
                         )
                         fid.write(msg)
             # parse the events from the STIM channels
@@ -202,8 +197,6 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                     df = pd.concat((df, this_df), axis="index", ignore_index=True)
             # write the raw data in the BIDS folder tree
             bids_path.update(task=task_name)
-            if session in ("a", "b"):
-                assert erm is not None, bids_path
             write_raw_bids(
                 raw=raw,
                 events=events,
