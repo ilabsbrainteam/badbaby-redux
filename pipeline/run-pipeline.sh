@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euf -o pipefail
 
-if [ $# -ne 2 ]
+if [ $# -lt 2 ]
 then
     echo "USAGE: run-pipeline.sh EXPERIMENT_NAME PREPOST"
     echo "    allowed values for EXPERIMENT_NAME:"
@@ -42,4 +42,4 @@ case "$2" in
         ;;
 esac
 
-xvfb-run mne_bids_pipeline --config "$1.py" --steps=$STEPS
+xvfb-run mne_bids_pipeline --config "$1.py" --steps=$STEPS "${@:3}"
