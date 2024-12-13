@@ -82,6 +82,12 @@ sessions: list | Literal["all"] = ["a", "b"]
 # BIDS dataset.
 # """
 
+allow_missing_sessions: bool = True
+# """
+# Whether to continue processing the dataset if some combinations of `subjects` and
+# `sessions` are missing.
+# """
+
 task: str = "AmplitudeModulatedTones"
 # """
 # The task to process.
