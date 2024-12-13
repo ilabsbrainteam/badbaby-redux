@@ -180,6 +180,18 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                             f"({raw_meas_date.date()})\n"
                         )
                         fid.write(msg)
+                # no data files have EEG, so expunge EEG channels from ERMs to avoid
+                # error in `maxwell_filter_prepare_emptyroom` when copying montage
+                if "eeg" in erm:
+                    n_eeg = len(erm.get_channel_types(picks="eeg"))
+                    with open(erm_log, "a") as fid:
+                        msg = (
+                            f"montage mismatch: dropping {n_eeg} EEG channels from "
+                            f"{erm_file.name}\n"
+                        )
+                        fid.write(msg)
+                    picks = list(set(erm.get_channel_types(unique=True)) - set(["eeg"]))
+                    erm.pick(picks)
             # parse the events from the STIM channels
             score_func = (
                 parse_mmn_events
