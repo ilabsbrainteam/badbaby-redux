@@ -775,6 +775,8 @@ mf_mc_dist_limit: float = 0.01
 # Only used when [`use_maxwell_filter=True`][mne_bids_pipeline._config.use_maxwell_filter]
 # """  # noqa: E501
 
+mf_extra_kws: dict[str, Any] = dict(bad_condition="ignore")
+
 # ## Filtering & resampling
 
 # ### Filtering
