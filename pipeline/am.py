@@ -12,7 +12,7 @@ from mne_bids import BIDSPath
 from mne_bids_pipeline.typing import (
     # ArbitraryContrast,
     # DigMontageType,
-    # FloatArrayLike,
+    FloatArrayLike,
     PathLike,
 )
 
@@ -647,8 +647,7 @@ mf_st_correlation: float = 0.95  # TODO if bandpassed first, increase to 0.98
 #     ```
 # """
 
-# TODO check with eric about injecting the precomputed avg headpos as a numeric array here
-# mf_destination: Literal["reference_run"] | FloatArrayLike = translation(z=0.04)
+mf_destination: Literal["reference_run", "twa"] | FloatArrayLike = "twa"
 # """
 # Despite all possible care to avoid movements in the MEG, the participant
 # will likely slowly drift down from the Dewar or slightly shift the head
@@ -1145,7 +1144,7 @@ conditions: Sequence[str] | dict[str, str] | None = ["amtone"]
 #     ```
 # """  # noqa: E501
 
-spatial_filter: Literal["ssp", "ica"] | None = "ica"
+spatial_filter: Literal["ssp", "ica"] | None = "ssp"
 # """
 # Whether to use a spatial filter to detect and remove artifacts. The BIDS
 # Pipeline offers the use of signal-space projection (SSP) and independent
@@ -1182,7 +1181,7 @@ spatial_filter: Literal["ssp", "ica"] | None = "ica"
 # Minimal number of EOG epochs needed to compute SSP projectors.
 # """
 
-# n_proj_eog: dict[str, float] = dict(n_mag=1, n_grad=1, n_eeg=1)
+n_proj_eog: dict[str, float] = dict(n_mag=0, n_grad=0, n_eeg=0)
 # """
 # Number of SSP vectors to create for EOG artifacts for each channel type.
 # """
@@ -1204,7 +1203,7 @@ spatial_filter: Literal["ssp", "ica"] | None = "ica"
 # on individual EOG epochs.
 # """
 
-# ssp_meg: Literal["separate", "combined", "auto"] = "auto"
+ssp_meg: Literal["separate", "combined", "auto"] = "auto"
 # """
 # Whether to compute SSP vectors for MEG channels separately (`'separate'`)
 # or jointly (`'combined'`) for magnetometers and gradiomenters. When using
@@ -1251,7 +1250,7 @@ spatial_filter: Literal["ssp", "ica"] | None = "ica"
 #     ```
 # """
 
-# ssp_ecg_channel: str | None = None  # TODO verify with maggie
+ssp_ecg_channel: str | None = None  # "MEG0111"
 # """
 # Channel to use for ECG SSP. Can be useful when the autodetected ECG channel
 # is not reliable.
