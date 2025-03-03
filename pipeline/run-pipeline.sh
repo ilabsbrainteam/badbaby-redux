@@ -32,9 +32,8 @@ case "$2" in
     post)
         STEPS=preprocessing/_06b_run_ssp,preprocessing/_07_make_epochs,preprocessing/_08a_apply_ica,preprocessing/_08b_apply_ssp,preprocessing/_09_ptp_reject,sensor,source
         ;;
-    copy)
-        python transfer-ICA-bads.py $1
-        exit 0
+    all)
+        STEPS=init,preprocessing,sensor,source
         ;;
     *)
         echo "second argument must be one of: pre, post, init, preprocessing, sensor, source, freesurfer"
