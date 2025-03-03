@@ -1,187 +1,113 @@
-sub-101:
-  ses-c: null
-sub-102:
-  ses-c: null
-sub-103:
-  ses-c: null
-sub-104:
-  ses-c: null
-sub-105:
-  ses-c: null
-sub-106:
-  ses-c: null
-sub-108:
-  ses-c: null
-sub-109:
-  ses-c: null
-sub-110:
-  ses-c: null
-sub-111:
-  ses-c: null
-sub-112:
-  ses-c: null
-sub-113:
-  ses-c: null
-sub-114:
-  ses-c: null
-sub-116:
-  ses-a: MEG0141
-  ses-b: MEG0111
-  ses-c: null
-sub-117:
-  ses-a: MEG0141
-  ses-b: MEG1541
-sub-118:
-  ses-c: null
-sub-119:
-  ses-a: MEG0141
-  ses-b: MEG0141
-sub-120:
-  ses-a: null
-  ses-b: MEG0141
-sub-122:
-  ses-a: MEG0111
-  ses-b: MEG0141
-sub-123:
-  ses-a: MEG0141
-sub-124:
-  ses-a: MEG0141
-  ses-b: MEG0141
-sub-125:
-  ses-a: MEG0141
-sub-126:
-  ses-a: MEG0141
-sub-127:
-  ses-a: MEG0141
-  ses-b: MEG0141
-sub-128:
-  ses-a: MEG1541
-  ses-b: MEG0141
-sub-129:
-  ses-a: MEG0141
-  ses-b: null
-sub-130:
-  ses-a: MEG1421
-  ses-b: MEG1431
-sub-131:
-  ses-a: MEG0141
-  ses-b: MEG0141
-sub-132:
-  ses-a: MEG0111
-sub-133:
-  ses-a: MEG0141
-  ses-b: MEG0141
-sub-134:
-  ses-a: MEG0141
-  ses-b: MEG1541
-sub-202:
-  ses-c: null
-sub-203:
-  ses-c: null
-sub-205:
-  ses-c: null
-sub-206:
-  ses-c: null
-sub-207:
-  ses-c: null
-sub-208:
-  ses-a: null
-  ses-b: MEG0141
-  ses-c: null
-sub-209:
-  ses-a: MEG1541
-  ses-b: MEG1531
-sub-211:
-  ses-a: MEG0141
-  ses-b: MEG1541
-sub-212:
-  ses-c: null
-sub-213:
-  ses-c: null
-sub-214:
-  ses-c: null
-sub-215:
-  ses-a: MEG0111
-  ses-b: MEG0141
-sub-217:
-  ses-c: null
-sub-218:
-  ses-a: MEG0141
-sub-220:
-  ses-a: MEG1541
-  ses-b: MEG1541
-sub-222:
-  ses-a: MEG0111
-sub-223:
-  ses-a: MEG0111
-  ses-b: MEG0141
-sub-224:
-  ses-a: MEG0111
-  ses-b: MEG0141
-sub-225:
-  ses-a: MEG0141
-  ses-b: MEG0141
-sub-226:
-  ses-a: MEG0141
-  ses-b: MEG0111
-sub-227:
-  ses-a: MEG0141
-sub-228:
-  ses-a: MEG0111
-sub-229:
-  ses-a: null
-  ses-b: MEG0111
-sub-231:
-  ses-a: MEG0141
-  ses-b: MEG0141
-sub-232:
-  ses-a: MEG0141
-  ses-b: null
-sub-233:
-  ses-a: MEG0141
-  ses-b: MEG0111
-sub-301:
-  ses-a: MEG0111
-  ses-b: MEG1541
-sub-302:
-  ses-a: MEG0141
-sub-304:
-  ses-a: MEG0141
-  ses-b: MEG0141
-sub-305:
-  ses-a: MEG1541
-sub-307:
-  ses-a: MEG0141
-sub-308:
-  ses-a: MEG0111
-sub-309:
-  ses-a: MEG0141
-  ses-b: MEG0141
-sub-310:
-  ses-a: MEG0111
-  ses-b: MEG0141
-sub-311:
-  ses-a: MEG0141
-  ses-b: MEG0141
-sub-312:
-  ses-a: MEG0141
-  ses-b: MEG1541
-sub-314:
-  ses-a: MEG1431
-  ses-b: MEG0141
-sub-315:
-  ses-a: MEG0141
-sub-316:
-  ses-a: MEG0141
-  ses-b: MEG0141
-sub-317:
-  ses-a: MEG0141
-sub-318:
-  ses-a: MEG0141
-  ses-b: MEG0141
-sub-319:
-  ses-a: MEG0111
-  ses-b: MEG0141
-sub-320:
-  ses-a: MEG0141
-  ses-b: MEG0111
+sub-101_ses-c: null
+sub-102_ses-c: null
+sub-103_ses-c: null
+sub-104_ses-c: null
+sub-105_ses-c: null
+sub-106_ses-c: null
+sub-108_ses-c: null
+sub-109_ses-c: null
+sub-110_ses-c: null
+sub-111_ses-c: null
+sub-112_ses-c: null
+sub-113_ses-c: null
+sub-114_ses-c: null
+sub-116_ses-a: MEG0141
+sub-116_ses-b: MEG0111
+sub-116_ses-c: null
+sub-117_ses-a: MEG0141
+sub-117_ses-b: MEG1541
+sub-118_ses-c: null
+sub-119_ses-a: MEG0141
+sub-119_ses-b: MEG0141
+sub-120_ses-a: null
+sub-120_ses-b: MEG0141
+sub-122_ses-a: MEG0111
+sub-122_ses-b: MEG0141
+sub-123_ses-a: MEG0141
+sub-124_ses-a: MEG0141
+sub-124_ses-b: MEG0141
+sub-125_ses-a: MEG0141
+sub-126_ses-a: MEG0141
+sub-127_ses-a: MEG0141
+sub-127_ses-b: MEG0141
+sub-128_ses-a: MEG1541
+sub-128_ses-b: MEG0141
+sub-129_ses-a: MEG0141
+sub-129_ses-b: null
+sub-130_ses-a: MEG1421
+sub-130_ses-b: MEG1431
+sub-131_ses-a: MEG0141
+sub-131_ses-b: MEG0141
+sub-132_ses-a: MEG0111
+sub-133_ses-a: MEG0141
+sub-133_ses-b: MEG0141
+sub-134_ses-a: MEG0141
+sub-134_ses-b: MEG1541
+sub-202_ses-c: null
+sub-203_ses-c: null
+sub-205_ses-c: null
+sub-206_ses-c: null
+sub-207_ses-c: null
+sub-208_ses-a: null
+sub-208_ses-b: MEG0141
+sub-208_ses-c: null
+sub-209_ses-a: MEG1541
+sub-209_ses-b: MEG1531
+sub-211_ses-a: MEG0141
+sub-211_ses-b: MEG1541
+sub-212_ses-c: null
+sub-213_ses-c: null
+sub-214_ses-c: null
+sub-215_ses-a: MEG0111
+sub-215_ses-b: MEG0141
+sub-217_ses-c: null
+sub-218_ses-a: MEG0141
+sub-220_ses-a: MEG1541
+sub-220_ses-b: MEG1541
+sub-222_ses-a: MEG0111
+sub-223_ses-a: MEG0111
+sub-223_ses-b: MEG0141
+sub-224_ses-a: MEG0111
+sub-224_ses-b: MEG0141
+sub-225_ses-a: MEG0141
+sub-225_ses-b: MEG0141
+sub-226_ses-a: MEG0141
+sub-226_ses-b: MEG0111
+sub-227_ses-a: MEG0141
+sub-228_ses-a: MEG0111
+sub-229_ses-a: null
+sub-229_ses-b: MEG0111
+sub-231_ses-a: MEG0141
+sub-231_ses-b: MEG0141
+sub-232_ses-a: MEG0141
+sub-232_ses-b: null
+sub-233_ses-a: MEG0141
+sub-233_ses-b: MEG0111
+sub-301_ses-a: MEG0111
+sub-301_ses-b: MEG1541
+sub-302_ses-a: MEG0141
+sub-304_ses-a: MEG0141
+sub-304_ses-b: MEG0141
+sub-305_ses-a: MEG1541
+sub-307_ses-a: MEG0141
+sub-308_ses-a: MEG0111
+sub-309_ses-a: MEG0141
+sub-309_ses-b: MEG0141
+sub-310_ses-a: MEG0111
+sub-310_ses-b: MEG0141
+sub-311_ses-a: MEG0141
+sub-311_ses-b: MEG0141
+sub-312_ses-a: MEG0141
+sub-312_ses-b: MEG1541
+sub-314_ses-a: MEG1431
+sub-314_ses-b: MEG0141
+sub-315_ses-a: MEG0141
+sub-316_ses-a: MEG0141
+sub-316_ses-b: MEG0141
+sub-317_ses-a: MEG0141
+sub-318_ses-a: MEG0141
+sub-318_ses-b: MEG0141
+sub-319_ses-a: MEG0111
+sub-319_ses-b: MEG0141
+sub-320_ses-a: MEG0141
+sub-320_ses-b: MEG0111
