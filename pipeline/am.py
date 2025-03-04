@@ -3,6 +3,7 @@
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Annotated, Any, Literal
+from yaml import safe_load
 
 from annotated_types import Ge, Interval, Len, MinLen
 from mne import Covariance
@@ -1250,7 +1251,10 @@ ssp_meg: Literal["separate", "combined", "auto"] = "auto"
 #     ```
 # """
 
-ssp_ecg_channel: str | None = None  # "MEG0111"
+with open("ecg-mags.yaml") as fid:
+    ecg_mags = safe_load(fid)
+ssp_ecg_channel = {k: v for k, v in ecg_mags.items() if v is not None}
+# ssp_ecg_channel: str | None = None
 # """
 # Channel to use for ECG SSP. Can be useful when the autodetected ECG channel
 # is not reliable.
