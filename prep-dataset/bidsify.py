@@ -267,8 +267,6 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                 nii_file = write_anat(
                     image=t1_fname, bids_path=mri_path, landmarks=landmarks
                 )
-                # we don't actually need the nii.gz file, just the JSON sidecar
-                Path(nii_file).unlink()
                 # update our signal variable
                 last_anat_written = anat_to_write
             # write the fine-cal and crosstalk files (once per subject/session)
