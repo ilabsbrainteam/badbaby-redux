@@ -801,13 +801,13 @@ mf_extra_kws: dict[str, Any] = dict(bad_condition="ignore")
 # If you need more fancy analysis, you are already likely past this kind
 # of tips! 😇
 
-# l_freq: float | None = None
+l_freq: float | None = 0.1
 # """
 # The low-frequency cut-off in the highpass filtering step.
 # Keep it `None` if no highpass filtering should be applied.
 # """
 
-h_freq: float | None = 55.0
+h_freq: float | None = 50.0
 # """
 # The high-frequency cut-off in the lowpass filtering step.
 # Keep it `None` if no lowpass filtering should be applied.
@@ -1187,7 +1187,7 @@ n_proj_eog: dict[str, float] = dict(n_mag=0, n_grad=0, n_eeg=0)
 # Number of SSP vectors to create for EOG artifacts for each channel type.
 # """
 
-# n_proj_ecg: dict[str, float] = dict(n_mag=1, n_grad=1, n_eeg=1)
+n_proj_ecg: dict[str, float] = dict(n_mag=2, n_grad=2, n_eeg=0)
 # """
 # Number of SSP vectors to create for ECG artifacts for each channel type.
 # """
