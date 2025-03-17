@@ -9,6 +9,7 @@ import yaml
 from mne_bids import (
     BIDSPath,
     get_anat_landmarks,
+    mark_channels,
     write_anat,
     write_meg_calibration,
     write_meg_crosstalk,
@@ -105,6 +106,10 @@ event_mappings = dict(
 read_raw_kw = dict(allow_maxshield=True, preload=False)
 
 df = None
+
+# load the list of bad channels ("prebads") that were noted during acquisition
+with open("bad-channels.yaml") as fid:
+    prebads = yaml.safe_load(fid)
 
 # we write MRI data once per subj, but we need a raw file loaded in order to properly
 # write the `trans` information. Use a signal variable to avoid writing more than once.
@@ -269,6 +274,14 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                 )
                 # update our signal variable
                 last_anat_written = anat_to_write
+            # write the bad channels
+            if compound_subj_name in prebads:
+                mark_channels(
+                    bids_path=bids_path,
+                    ch_names=[f"MEG{ch}" for ch in prebads[compound_subj_name]],
+                    status="bad",
+                    descriptions="prebad",
+                )
             # write the fine-cal and crosstalk files (once per subject/session)
             cal_path = BIDSPath(root=bids_root, subject=subj, session=session)
             write_meg_calibration(cal_dir / "sss_cal.dat", bids_path=cal_path)
