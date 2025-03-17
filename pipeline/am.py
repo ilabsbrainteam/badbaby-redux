@@ -1187,7 +1187,7 @@ n_proj_eog: dict[str, float] = dict(n_mag=0, n_grad=0, n_eeg=0)
 # Number of SSP vectors to create for EOG artifacts for each channel type.
 # """
 
-n_proj_ecg: dict[str, float] = dict(n_mag=3, n_grad=3, n_eeg=0)
+n_proj_ecg: dict[str, float] = dict(n_mag=2, n_grad=2, n_eeg=0)
 # """
 # Number of SSP vectors to create for ECG artifacts for each channel type.
 # """
