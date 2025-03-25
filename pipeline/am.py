@@ -1045,7 +1045,7 @@ conditions: Sequence[str] | dict[str, str] | None = ["amtone"]
 #                   'incorrect': 'response/incorrect'}
 # """  # noqa : E501
 
-# epochs_tmin: float = -0.2
+epochs_tmin: float = -0.2
 # """
 # The beginning of an epoch, relative to the respective event, in seconds.
 
@@ -1055,7 +1055,7 @@ conditions: Sequence[str] | dict[str, str] | None = ["amtone"]
 #     ```
 # """
 
-# epochs_tmax: float = 0.5
+epochs_tmax: float = 1.7
 # """
 # The end of an epoch, relative to the respective event, in seconds.
 # ???+ example "Example"
@@ -1075,7 +1075,7 @@ conditions: Sequence[str] | dict[str, str] | None = ["amtone"]
 # and when the annotations do not contain any stimulation or behavior events.
 # """
 
-# baseline: tuple[float | None, float | None] | None = (None, 0)
+baseline: tuple[float | None, float | None] | None = (-0.2, 0)
 # """
 # Specifies which time interval to use for baseline correction of epochs;
 # if `None`, no baseline correction is applied.
@@ -1254,6 +1254,7 @@ ssp_meg: Literal["separate", "combined", "auto"] = "auto"
 with open("ecg-mags.yaml") as fid:
     ecg_mags = safe_load(fid)
 ssp_ecg_channel = {k: v for k, v in ecg_mags.items() if v is not None}
+del ecg_mags
 # ssp_ecg_channel: str | None = None
 # """
 # Channel to use for ECG SSP. Can be useful when the autodetected ECG channel
@@ -1445,7 +1446,7 @@ ssp_ecg_channel = {k: v for k, v in ecg_mags.items() if v is not None}
 #     ```
 # """  # noqa: E501
 
-# reject_tmin: float | None = None
+# reject_tmin: float | None = None  # TODO try autoreject_global and/or autoreject_local
 # """
 # Start of the time window used to reject epochs. If `None`, the window will
 # start with the first time point. Has no effect if
@@ -1548,7 +1549,7 @@ ssp_ecg_channel = {k: v for k, v in ecg_mags.items() if v is not None}
 
 # ## Decoding / MVPA
 
-# decode: bool = True
+decode: bool = False
 # """
 # Whether to perform decoding (MVPA) on the specified
 # [`contrasts`][mne_bids_pipeline._config.contrasts]. Classifiers will be trained
@@ -1911,7 +1912,7 @@ ssp_ecg_channel = {k: v for k, v in ecg_mags.items() if v is not None}
 # *[FLASH MRI]: Fast low angle shot magnetic resonance imaging
 # """
 
-# recreate_bem: bool = False
+recreate_bem: bool = True
 # """
 # Whether to re-create the BEM surfaces, even if existing surfaces have been
 # found. If `False`, the BEM surfaces are only created if they do not exist
@@ -1933,7 +1934,7 @@ ssp_ecg_channel = {k: v for k, v in ecg_mags.items() if v is not None}
 
 # ## Source space & forward solution
 
-# mri_t1_path_generator: Callable[[BIDSPath], BIDSPath] | None = None  # TODO
+# mri_t1_path_generator: Callable[[BIDSPath], BIDSPath] | None = None
 # """
 # To perform source-level analyses, the Pipeline needs to generate a
 # transformation matrix that translates coordinates from MEG and EEG sensor
