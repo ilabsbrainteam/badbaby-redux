@@ -8,7 +8,7 @@ fpaths = deriv_root.rglob("**/sub-*_ses-?_task-AmplitudeModulatedTones_epo.fif")
 
 
 def drop_epochs_with_short_isi(epochs: mne.Epochs, event: str) -> mne.Epochs:
-    """Add metadata regarding the relative timing of prior / next trials."""
+    """Use metadata about the relative timing of prev/next trials to drop epochs."""
     kwargs = dict(
         events=epochs.events, event_id=epochs.event_id, sfreq=epochs.info["sfreq"]
     )
@@ -24,14 +24,15 @@ def drop_epochs_with_short_isi(epochs: mne.Epochs, event: str) -> mne.Epochs:
     drop_bef = metadata_bef.loc[metadata_bef[event] < 0]
     drop_aft = metadata_aft.loc[metadata_aft[event] > 0]
     drop_ix = sorted(set(drop_bef.index) | set(drop_aft.index))
-    epochs.drop(drop_ix)
+    epochs.drop(drop_ix, reason="short_ISI")
 
     return epochs
 
 
 for fpath in fpaths:
-    epo = mne.read_epochs(fpath)
     backup_name = fpath.with_name(fpath.name.replace("_epo.fif", "_no-dropped-epo.fif"))
-    fpath.rename(backup_name)
+    if not backup_name.exists():
+        fpath.rename(backup_name)
+    epo = mne.read_epochs(backup_name)
     epo = drop_epochs_with_short_isi(epo, "amtone")
     epo.save(fpath)
