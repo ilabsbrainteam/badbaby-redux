@@ -100,7 +100,7 @@ generic_events = dict(BAD_ACQ_SKIP=999)
 event_mappings = dict(
     am=dict(amtone=102),
     ids=dict(trial_0=200, trial_1=201, trial_2=202, trial_3=203, trial_4=204),
-    mmn=dict(standard=302, deviant_ba=303, deviant_wa=304),
+    mmn={"standard": 302, "deviant/ba": 303, "deviant/wa": 304},
 )
 
 read_raw_kw = dict(allow_maxshield=True, preload=False)
