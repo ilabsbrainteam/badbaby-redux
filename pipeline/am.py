@@ -1407,9 +1407,9 @@ del ecg_mags
 #     You can do a quick average of blink data and check what the amplitude looks
 #     like.
 
-# reject: dict[str, float] | Literal["autoreject_global", "autoreject_local"] | None = (
-#     None
-# )
+reject: dict[str, float] | Literal["autoreject_global", "autoreject_local"] | None = (
+    "autoreject_local"
+)
 # """
 # Peak-to-peak amplitude limits to mark epochs as bad. This allows you to remove
 # epochs with strong transient artifacts.
@@ -1446,7 +1446,7 @@ del ecg_mags
 #     ```
 # """  # noqa: E501
 
-# reject_tmin: float | None = None  # TODO try autoreject_global and/or autoreject_local
+# reject_tmin: float | None = None
 # """
 # Start of the time window used to reject epochs. If `None`, the window will
 # start with the first time point. Has no effect if
