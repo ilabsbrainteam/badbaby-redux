@@ -7,7 +7,9 @@ license: MIT
 """
 
 from collections import defaultdict
+from copy import deepcopy
 from pathlib import Path
+from yaml import safe_load
 
 import mne
 from mne.io.constants import FIFF
@@ -17,8 +19,11 @@ import pandas as pd
 # configurable params
 qc = False
 scaling_already_done = False
-do_nasion_shift = False
-nasion_shift_xyz = np.array([0, 0, 0.02])  # in meters!
+do_nasion_shift = True
+nasion_shift_xyz = np.array([0, 0, 0.03])  # in meters!
+
+with open("misplaced-nasion.yaml") as fid:
+    nasion_sub_ses = safe_load(fid)
 
 # path stuff
 root = Path("/storage/badbaby-redux").resolve()
@@ -59,6 +64,7 @@ for subject in subjects:
     # basics
     int_subj = int(subject.lstrip("bad_").rstrip("ab"))
     this_subj_dir = data_dir / subject / "raw_fif"
+    session = subject[-1] if subject[-1] in "ab" else "c"
 
     # we need to potentially handle each task recording separately, because some subjs
     # did some tasks on different day (thus different digitizations / different coregs)
@@ -74,13 +80,6 @@ for subject in subjects:
     for meas_date, tasks in meas_dates.items():
         # is this a meas_date with only 1 task? If so it needs its own trans/coreg
         extra_session = len(meas_dates) > 1 and len(tasks) == 1
-
-        # # TODO temporary hack to avoid re-running subjs when debugging
-        # sub = f"{subject}_{task}" if extra_session else subject
-        # if (subjects_dir / sub / "bem" / f"{sub}-5120-5120-5120-bem-sol.fif").exists():
-        #     continue
-        # # TODO end TODO
-
         # get age in days at time of recording
         age = (meas_date - ages.loc[int_subj, gestational_or_birth].date()).days
         _2mo = 2 * days_per_month
@@ -90,9 +89,9 @@ for subject in subjects:
             "(expected {low}-{high} days)\n"
         )
         # choose correct surrogate
-        if subject[-1] in "ab":
-            surrogate = f"ANTS{3 if subject.endswith('a') else 6}-0Months3T"
-            target_age = _2mo if subject.endswith("a") else _6mo
+        if session in "ab":
+            surrogate = f"ANTS{3 if session == 'a' else 6}-0Months3T"
+            target_age = _2mo if session == "a" else _6mo
             lo, hi = np.array([-7, 7]) + target_age
             if not lo <= age <= hi:
                 with open(mri_log, "a") as fid:
@@ -101,25 +100,37 @@ for subject in subjects:
             ix = np.argmin(np.abs(surrogate_age - age / days_per_month))
             surrogate = surrogates[surrogate_age_str[ix]]
 
-        # shift the nasion (needs info)
-        raw_fname = this_subj_dir / f"{subject}_{tasks[0]}_raw.fif"
-        info = mne.io.read_info(raw_fname, verbose=False)
-        if do_nasion_shift:
-            try:
-                nasion = next(
-                    p for p in info["dig"] if p["ident"] == FIFF.FIFFV_POINT_NASION
-                )
-            except StopIteration:
-                raise RuntimeError(f"{raw_fname.name} is missing nasion!!") from None
+        # shift the nasion
+        fiducials = "auto"
+        needs_shift = (
+            str(int_subj) in nasion_sub_ses and session in nasion_sub_ses[str(int_subj)]
+        )
+        if do_nasion_shift and needs_shift:
+            fids_path = subjects_dir / subject / "bem" / f"{subject}-fiducials.fif"
+            fiducials, coord_frame = mne.io.read_fiducials(fids_path)
+            assert coord_frame == FIFF.FIFFV_COORD_MRI, coord_frame
+            idx = [
+                ix
+                for ix, p in enumerate(fiducials)
+                if p["ident"] == FIFF.FIFFV_POINT_NASION
+                and p["kind"] == FIFF.FIFFV_POINT_CARDINAL
+            ]
+            idx = np.array(idx).item()
+            # need deepcopy because `r` array has flags OWNDATA=False, WRITEABLE=False
+            nasion = deepcopy(fiducials[idx])
             nasion["r"] += nasion_shift_xyz
+            nasion["r"].setflags(write=False)
+            fiducials[idx] = nasion
 
         # run automated coreg
+        raw_fname = this_subj_dir / f"{subject}_{tasks[0]}_raw.fif"
+        info = mne.io.read_info(raw_fname, verbose=False)
         coreg = mne.coreg.Coregistration(
-            info, subject=surrogate, subjects_dir=subjects_dir
+            info, subject=surrogate, subjects_dir=subjects_dir, fiducials=fiducials
         )
         coreg.set_scale_mode("3-axis")
         coreg.set_fid_match("matched")  # TODO consider using "nearest"?
-        coreg.fit_fiducials()  # TODO consider reducing nasion weight?
+        coreg.fit_fiducials()
         n_pts = coreg.compute_dig_mri_distances().size
         # do ICP fitting, and drop far-away points
         coreg.fit_icp(n_iterations=10)
@@ -131,25 +142,22 @@ for subject in subjects:
                 n_pts = new_n_pts
 
         # Most subjs have all tasks on the same meas_date, so only specify task in
-        # filename if needed (like we did for ERM)
-        trans_fname = f"{subject}_trans.fif"
-        subject_to = subject
-        if extra_session:
-            trans_fname = f"{subject}_{task}_trans.fif"
-            subject_to = f"{subject}_{task}"
+        # folder/filename if needed (like we did for ERM)
+        subject_to = f"{subject}_{tasks[0]}" if extra_session else subject
+
         # scale the MRI (and save it to `subjects_dir`). This step takes a while.
         mne.scale_mri(
             subject_from=surrogate,
             subject_to=subject_to,
             scale=coreg.scale,
-            overwrite=False,
+            overwrite=True,
             labels=True,
             annot=True,
             subjects_dir=subjects_dir,
             verbose=True,
         )
         # save the trans file
-        trans_fpath = subjects_dir / subject_to / trans_fname
+        trans_fpath = subjects_dir / subject_to / f"{subject_to}_trans.fif"
         mne.write_trans(trans_fpath, coreg.trans, overwrite=True)
 
         # make BEM solution. We only need 1-layer, but the 6mo surrogate only has
@@ -168,8 +176,16 @@ if qc:
         raw_fname = next(this_subj_dir.glob(f"{subject}_*_raw.fif"))
         info = mne.io.read_info(raw_fname, verbose=False)
         # load trans
-        trans_fname = this_subj_dir / f"{subject}-trans.fif"
-        trans = mne.read_trans(trans_fname)
+        task = raw_fname.name.split("_")[-2]
+        assert task in ("am", "mmn", "ids"), task
+        # try the task-specific filename first...
+        try:
+            trans = mne.read_trans(
+                subjects_dir / f"{subject}_{task}" / f"{subject}_{task}_trans.fif"
+            )
+        # ...if it doesn't exist, the non-task-specific is the correct one
+        except FileNotFoundError:
+            trans = mne.read_trans(subjects_dir / subject / f"{subject}_trans.fif")
         # plot
         mne.viz.plot_alignment(
             info=info,
