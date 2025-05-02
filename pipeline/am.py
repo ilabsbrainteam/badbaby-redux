@@ -148,7 +148,9 @@ task: str = "AmplitudeModulatedTones"
 # The BIDS `space` entity.
 # """
 
-subjects: Sequence[str] | Literal["all"] = "all"  # ["116", "119", "215"]
+subjects: Sequence[str] | Literal["all"] = "all"
+# with open("subs-extra-ecg-proj.yaml") as fid:
+#     subjects = safe_load(fid)
 # """
 # Subjects to analyze. If `'all'`, include all subjects. To only
 # include a subset of subjects, pass a list of their identifiers. Even
@@ -1187,7 +1189,7 @@ n_proj_eog: dict[str, float] = dict(n_mag=0, n_grad=0, n_eeg=0)
 # Number of SSP vectors to create for EOG artifacts for each channel type.
 # """
 
-n_proj_ecg: dict[str, float] = dict(n_mag=2, n_grad=2, n_eeg=0)
+n_proj_ecg: dict[str, float] = dict(n_mag=3, n_grad=3, n_eeg=0)
 # """
 # Number of SSP vectors to create for ECG artifacts for each channel type.
 # """
