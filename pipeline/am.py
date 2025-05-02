@@ -758,13 +758,13 @@ mf_mc_dist_limit: float = 0.01
 # Minimum distance (m) to accept for cHPI position fitting.
 # """
 
-# mf_mc_rotation_velocity_limit: float | None = None
+mf_mc_rotation_velocity_limit: float | None = 30  # deg/s
 # """
 # The rotation velocity limit (degrees/second) to use when annotating
 # movement-compensated data. If `None`, no annotations will be added.
 # """
 
-# mf_mc_translation_velocity_limit: float | None = None
+mf_mc_translation_velocity_limit: float | None = 0.025  # 25 mm/s
 # """
 # The translation velocity limit (meters/second) to use when annotating
 # movement-compensated data. If `None`, no annotations will be added.
@@ -1410,7 +1410,7 @@ del ecg_mags
 #     like.
 
 reject: dict[str, float] | Literal["autoreject_global", "autoreject_local"] | None = (
-    "autoreject_local"
+    dict(grad=1500e-13, mag=6000e-15)
 )
 # """
 # Peak-to-peak amplitude limits to mark epochs as bad. This allows you to remove
