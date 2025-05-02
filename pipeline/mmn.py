@@ -1114,7 +1114,7 @@ error.
                   'incorrect': 'response/incorrect'}
 """
 
-epochs_tmin: float = -0.7
+epochs_tmin: float = -0.2
 """
 The beginning of an epoch, relative to the respective event, in seconds.
 
@@ -1626,7 +1626,7 @@ epoched, and therefore the conditions should either match or be subsets of
 
 # ## Decoding / MVPA
 
-# decode: bool = True
+decode: bool = False
 """
 Whether to perform decoding (MVPA) on the specified
 [`contrasts`][mne_bids_pipeline._config.contrasts]. Classifiers will be trained
@@ -1665,14 +1665,14 @@ If `"cleaned"`, use the epochs after ICA / SSP and the following cleaning throug
 PTP-based rejection or Autoreject (epochs with the filename `*proc-clean_epo.fif`).
 """
 
-decoding_epochs_tmin: float | None = 0.1
+decoding_epochs_tmin: float | None = 0.
 """
 The first time sample to use for full epochs decoding. By default it starts
 at 0. If `None`,, it starts at the beginning of the epoch. Does not affect time-by-time
 decoding.
 """
 
-decoding_epochs_tmax: float | None = 0.6
+decoding_epochs_tmax: float | None = 0.75
 """
 The last time sample to use for full epochs decoding. By default it is set
 to None so it ends at the end of the epoch.
