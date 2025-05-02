@@ -2363,7 +2363,7 @@ the joblib.Memory class for more information."""
 #
 # These options control parallel processing (e.g., multiple subjects at once),
 
-n_jobs: int = 4
+n_jobs: int = 8
 """
 Specifies how many subjects you want to process in parallel. If `1`, disables
 parallel processing.
