@@ -1,7 +1,6 @@
 """Check dev_head_t for badbaby data."""
 
 from pathlib import Path
-from tqdm import tqdm
 import mne
 import yaml
 
@@ -19,7 +18,8 @@ tasks = dict(
 with open(outdir.parent / "refit-options.yml", "r") as fid:
     refit_options = yaml.load(fid, Loader=yaml.SafeLoader)
 
-for data_folder in tqdm(sorted(orig_data.rglob("bad_*/raw_fif/"))):
+# TODO: Add sorted to original script, too
+for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
     # extract the subject ID
     full_subj = data_folder.parts[-2]
     subj = full_subj.lstrip("bad_")
@@ -32,6 +32,7 @@ for data_folder in tqdm(sorted(orig_data.rglob("bad_*/raw_fif/"))):
     # BIDS requires subj to be a string, but cast to int as a failsafe first
     subj = str(int(subj[:3]))
     erm_files = list(data_folder.glob("*_erm_raw.fif"))
+    nl = "\n"
     for raw_file in data_folder.iterdir():
         if raw_file.name in bad_files:
             continue
@@ -63,12 +64,14 @@ for data_folder in tqdm(sorted(orig_data.rglob("bad_*/raw_fif/"))):
             print_name = raw_file.name.ljust(30)
             if ang > 20 or dist > 15:  # 20 deg or 1.5 cm
                 print(
-                    f"{print_name} refit delta      {ang:5.1f}° {dist:5.1f} mm"
+                    f"{nl}{print_name} refit delta      {ang:5.1f}° {dist:5.1f} mm"
                 )
+                nl = ""
             ang, dist = mne.transforms.angle_distance_between_rigid(
                 info["dev_head_t"]["trans"], angle_units="deg", distance_units="mm"
             )
             if ang > 55 or dist < 20 or dist > 120:
                 print(
-                    f"{print_name} identity delta   {ang:5.1f}° {dist:5.1f} mm"
+                    f"{nl}{print_name} identity delta   {ang:5.1f}° {dist:5.1f} mm"
                 )
+                nl = ""
