@@ -17,6 +17,7 @@ tasks = dict(
 )
 with open(outdir.parent / "refit-options.yml", "r") as fid:
     refit_options = yaml.load(fid, Loader=yaml.SafeLoader)
+report_file = outdir / "dev-head-t-report.h5"
 
 # TODO: Add sorted to original script, too
 for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
@@ -41,37 +42,49 @@ for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
         # in case someone was manually trying things out:
         if "_tsss" in raw_file.name or "_pos" in raw_file.name:
             continue
-        # loop over experimental tasks
-        for task_code, task_name in tasks.items():
-            if task_code not in raw_file.name:
-                continue
-            # TODO: This should move to "bidsify.py" and update metadata before writing
-            refit_option = refit_options.get(raw_file.name, {})
-            info = mne.io.read_info(raw_file)
-            kwargs = dict(locs=False, amplitudes=False, dist_limit=0.03, linearity_limit=0.01, verbose=False)
-            kwargs.update(refit_option)
-            try:
-                new_info = mne.chpi.refit_hpi(info.copy(), **kwargs)
-            except Exception:
-                print(f"Refit failed for {raw_file.name} with {refit_option=}:")
-                raise
-            ang, dist = mne.transforms.angle_distance_between_rigid(
-                info["dev_head_t"]["trans"],
-                new_info["dev_head_t"]["trans"],
-                angle_units="deg",
-                distance_units="mm",
-            )
-            print_name = raw_file.name.ljust(30)
-            if ang > 20 or dist > 15:  # 20 deg or 1.5 cm
-                print(
-                    f"{nl}{print_name} refit delta      {ang:5.1f}° {dist:5.1f} mm"
+        if not any(task_code in raw_file.name for task_code in tasks):
+            continue
+        # TODO: This should move to "bidsify.py" and update metadata before writing
+        refit_option = refit_options.get(raw_file.name, {})
+        info = mne.io.read_info(raw_file)
+        kwargs = dict(locs=False, amplitudes=False, dist_limit=0.03, colinearity_limit=0.01, verbose=False)
+        kwargs.update(refit_option)
+        try:
+            new_info = mne.chpi.refit_hpi(info.copy(), **kwargs)
+        except Exception:
+            print(f"Refit failed for {raw_file.name} with {refit_option=}:")
+            raise
+        ang_d, dist_d = mne.transforms.angle_distance_between_rigid(
+            info["dev_head_t"]["trans"],
+            new_info["dev_head_t"]["trans"],
+            angle_units="deg",
+            distance_units="mm",
+        )
+        print_name = raw_file.name.ljust(30)
+        why = list()
+        if ang_d > 20 or dist_d > 15:  # 20 deg or 1.5 cm
+            why.append(f"refit delta      {ang_d:5.1f}° {dist_d:5.1f} mm")
+            print(f"{nl}{print_name} {why[-1]}")
+        ang_i, dist_i = mne.transforms.angle_distance_between_rigid(
+            info["dev_head_t"]["trans"], angle_units="deg", distance_units="mm"
+        )
+        if ang_i > 55 or dist_i < 20 or dist_i > 120:
+            why.append(f"identity delta   {ang_i:5.1f}° {dist_i:5.1f} mm")
+            print(f"{nl}{print_name} {why[-1]}")
+            nl = ""
+        if why:
+            # Generate report figures
+            figs = list()
+            for this_info in (info, new_info):
+                fig = mne.viz.create_3d_figure(bgcolor="w", size=(800, 800))
+                mne.viz.plot_alignment(this_info, trans, subject, subjects_dir, coord_frame="meg", fig=fig, dig=True)
+                figs.append(fig)
+            with mne.report.open_report(report_file, title="check-dev-head-t report") as report:
+                report.add_html(
+                    "<br>".join(why), title=f"{print_name} info", section=subj, replace=True,
                 )
-                nl = ""
-            ang, dist = mne.transforms.angle_distance_between_rigid(
-                info["dev_head_t"]["trans"], angle_units="deg", distance_units="mm"
-            )
-            if ang > 55 or dist < 20 or dist > 120:
-                print(
-                    f"{nl}{print_name} identity delta   {ang:5.1f}° {dist:5.1f} mm"
+                report.add_figure(
+                    figs, title=f"{print_name} alignment", section=subj, replace=True,
                 )
-                nl = ""
+            for fig in figs:
+                mne.viz.close_3d_figure(fig)

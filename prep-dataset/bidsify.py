@@ -69,7 +69,9 @@ orig_data = root / "data"
 bids_root = root / "bids-data"
 cal_dir = root / "calibration"
 mri_dir = root / "anat"
-outdir = root / "prep-dataset" / "qc"
+prep_dir = root / "prep-dataset"
+outdir = prep_dir / "qc"
+outdir.mkdir(exist_ok=True)
 
 with open(root / "metadata" / "daysback.yaml", "r") as fid:
     DAYSBACK = yaml.safe_load(fid)
@@ -85,7 +87,7 @@ for log in logs:
         pass
 
 # bad/corrupt files
-with open(outdir.parent / "bad-files.yaml", "r") as fid:
+with open(prep_dir / "bad-files.yaml", "r") as fid:
     bad_files = yaml.load(fid, Loader=yaml.SafeLoader)
 
 # tasks
@@ -108,7 +110,7 @@ read_raw_kw = dict(allow_maxshield=True, preload=False)
 df = None
 
 # load the list of bad channels ("prebads") that were noted during acquisition
-with open("bad-channels.yaml") as fid:
+with open(prep_dir / "bad-channels.yaml") as fid:
     prebads = yaml.safe_load(fid)
 
 # we write MRI data once per subj, but we need a raw file loaded in order to properly

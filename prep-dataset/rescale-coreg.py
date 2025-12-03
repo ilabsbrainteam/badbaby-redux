@@ -22,15 +22,17 @@ scaling_already_done = False
 do_nasion_shift = True
 nasion_shift_xyz = np.array([0, 0, 0.03])  # in meters!
 
-with open("misplaced-nasion.yaml") as fid:
-    nasion_sub_ses = safe_load(fid)
-
 # path stuff
 root = Path("/storage/badbaby-redux").resolve()
 subjects_dir = root / "anat"
 data_dir = root / "data"
-outdir = root / "prep-dataset" / "qc"
+prep_dir = root / "prep-dataset"
+outdir = prep_dir / "qc"
 subjects = sorted(path.name for path in data_dir.glob("bad_*"))
+subjects_dir.mkdir(exist_ok=True)
+
+with open(prep_dir / "misplaced-nasion.yaml") as fid:
+    nasion_sub_ses = safe_load(fid)
 
 # init logging (erase old log files)
 mri_log = outdir / "log-of-MRI-scaling-issues.txt"
@@ -106,7 +108,7 @@ for subject in subjects:
             str(int_subj) in nasion_sub_ses and session in nasion_sub_ses[str(int_subj)]
         )
         if do_nasion_shift and needs_shift:
-            fids_path = subjects_dir / subject / "bem" / f"{subject}-fiducials.fif"
+            fids_path = subjects_dir / surrogate / "bem" / f"{surrogate}-fiducials.fif"
             fiducials, coord_frame = mne.io.read_fiducials(fids_path)
             assert coord_frame == FIFF.FIFFV_COORD_MRI, coord_frame
             idx = [
