@@ -1326,6 +1326,7 @@ otherwise, SSP won't be able to "see" these artifacts.
 
 ecg_mags = safe_load((_pipeline_root / "ecg-mags.yaml").read_text("utf-8"))
 ssp_ecg_channel = {k: v for k, v in ecg_mags.items() if v is not None}
+# TODO: SHOULD THIS REALLY OVERRIDE THE VALUES ABOVE?
 ssp_ecg_channel = "MEG0113"
 # ssp_ecg_channel: str | dict[str, str] | None = None
 """
