@@ -5,7 +5,26 @@
 # Filename:
 #  refit: bool (whether or not to refit in the bidsify.py script)
 #  kwarg: value (passed to refit_hpi function)
-bad_105_am_raw.fif:
-  dist_limit: 0.04
-bad_207_ids_raw.fif:
-  dist_limit: 0.04
+#
+# Existing reports can be examine with for example in reports/2025-05-06:
+# (opens 10 at once):
+#
+#     $ count=0; for HTML in *.html; do count=$(($count+1)); echo $HTML; google-chrome "file://$PWD/${HTML}#Sensor_alignment"; if (( $count % 10 == 0 )); then read; fi; done
+#
+
+# Original flipped
+bad_106_am_raw.fif:
+  refit: true
+bad_106_mmn_raw.fif:
+  refit: true
+bad_126a_mmn_raw.fif:  # original flipped, and matches am now (pointed a bit up and right)
+  refit: true
+bad_130b_mmn_raw.fif:  # original flipped and collides with helmet (thus missing source alignment in report)
+  refit: true
+
+# None of these are big differences, but our errors are lower and the tilt is more consistent
+bad_134a_am_raw.fif:
+  refit: true
+bad_223a_mmn_raw.fif:
+  refit: true
+  dist_limit: 0.02

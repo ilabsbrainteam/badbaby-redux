@@ -24,9 +24,13 @@ with open(outdir.parent / "refit-options.yml", "r") as fid:
     refit_options = yaml.load(fid, Loader=yaml.SafeLoader)
 report_file = outdir / "dev-head-t-report.h5"
 subjects_dir = root / "anat"
+check_runs = set("bad_317a_mmn_raw.fif".split())
 
-# TODO: Add sorted to original script, too
-for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
+data_folders = sorted(orig_data.rglob("bad_*/raw_fif/"))
+all_files = set(sum((list(file.name for file in data_folder.iterdir()) for data_folder in data_folders), []))
+missing = set(refit_options) - set(all_files)
+assert missing == set(), f"refit-options.yml has subjects not in all_files: {missing}"
+for data_folder in data_folders:
     # extract the subject ID
     subject = data_folder.parts[-2]
     subj = subject.lstrip("bad_")
@@ -40,13 +44,15 @@ for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
     subj = str(int(subj[:3]))
     erm_files = list(data_folder.glob("*_erm_raw.fif"))
     nl = "\n"
-    for raw_file in data_folder.iterdir():
+    for raw_file in sorted(data_folder.iterdir()):
         if raw_file.name in bad_files:
             continue
         if "_erm_" in raw_file.name:
             continue
         # in case someone was manually trying things out:
         if "_tsss" in raw_file.name or "_pos" in raw_file.name:
+            continue
+        if check_runs and raw_file.name not in check_runs:
             continue
         task = [task_code for task_code in tasks if task_code in raw_file.name]
         assert len(task) in (0, 1), len(task)
@@ -56,7 +62,10 @@ for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
         refit_option = refit_options.get(raw_file.name, {}).copy()
         refit_option.pop("refit", None)  # remove 'refit' key if present
         info = mne.io.read_info(raw_file)
-        kwargs = dict(locs=False, amplitudes=False, dist_limit=0.03, colinearity_limit=0.01, verbose=False)
+        verbose = raw_file.name in check_runs
+        if verbose:
+            print(raw_file.name)
+        kwargs = dict(locs=False, amplitudes=False, dist_limit=0.01, colinearity_limit=0.01, verbose=verbose)
         kwargs.update(refit_option)
         try:
             new_info = mne.chpi.refit_hpi(info.copy(), **kwargs)
@@ -74,14 +83,17 @@ for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
         if ang_d > 20 or dist_d > 15:  # 20 deg or 1.5 cm
             why.append(f"refit delta      {ang_d:5.1f}° {dist_d:5.1f} mm")
             print(f"{nl}{print_name} {why[-1]}")
+            nl = ""
         ang_i, dist_i = mne.transforms.angle_distance_between_rigid(
             info["dev_head_t"]["trans"], angle_units="deg", distance_units="mm"
         )
-        if ang_i > 55 or dist_i < 20 or dist_i > 120:
+        if ang_i > 65 or dist_i < 20 or dist_i > 120:
             why.append(f"identity delta   {ang_i:5.1f}° {dist_i:5.1f} mm")
             print(f"{nl}{print_name} {why[-1]}")
             nl = ""
         if why:
+            if verbose:
+                input("Press Enter to continue...")
             # Generate report figures
             figs = list()
             try:

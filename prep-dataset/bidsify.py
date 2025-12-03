@@ -122,7 +122,7 @@ with open(prep_dir / "refit-options.yml", "r") as fid:
 last_anat_written = None
 
 # classify raw files by "task" from the filenames
-for data_folder in orig_data.rglob("bad_*/raw_fif/"):
+for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
     # extract the subject ID
     full_subj = data_folder.parts[-2]
     subj = full_subj.lstrip("bad_")
@@ -140,7 +140,7 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
     erm_files = list(data_folder.glob("*_erm_raw.fif"))
 
     # classify the raw files by task, and write them to the BIDS folder
-    for raw_file in data_folder.iterdir():
+    for raw_file in sorted(data_folder.iterdir()):
         if raw_file.name in bad_files:
             continue
         if "_erm_" in raw_file.name:
@@ -221,7 +221,7 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
             # fix dev_head_t if needed
             refit_option = refit_options.get(raw_file.name, {}).copy()
             if refit_option.pop("refit", False):
-                kwargs = dict(locs=False, amplitudes=False, dist_limit=0.03, colinearity_limit=0.01, verbose=True)
+                kwargs = dict(locs=False, amplitudes=False, dist_limit=0.01, colinearity_limit=0.01, verbose=True)
                 kwargs.update(refit_option)
                 mne.chpi.refit_hpi(raw.info, **kwargs)
             # write the raw data in the BIDS folder tree
