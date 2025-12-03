@@ -1,4 +1,9 @@
-"""Check dev_head_t for badbaby data."""
+"""Check dev_head_t for badbaby data.
+
+After running this function, prep-dataset/dev-head-t-report.html will be created.
+Manually inspect this file, and decide which refits should actually be used during
+bidsify.py. Set ``refit: True`` for those subjects in prep-dataset/refit-options.yml.
+"""
 
 from pathlib import Path
 import mne
@@ -18,12 +23,13 @@ tasks = dict(
 with open(outdir.parent / "refit-options.yml", "r") as fid:
     refit_options = yaml.load(fid, Loader=yaml.SafeLoader)
 report_file = outdir / "dev-head-t-report.h5"
+subjects_dir = root / "anat"
 
 # TODO: Add sorted to original script, too
 for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
     # extract the subject ID
-    full_subj = data_folder.parts[-2]
-    subj = full_subj.lstrip("bad_")
+    subject = data_folder.parts[-2]
+    subj = subject.lstrip("bad_")
     if subj.endswith("a"):
         session = "a"
     elif subj.endswith("b"):
@@ -42,10 +48,13 @@ for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
         # in case someone was manually trying things out:
         if "_tsss" in raw_file.name or "_pos" in raw_file.name:
             continue
-        if not any(task_code in raw_file.name for task_code in tasks):
+        task = [task_code for task_code in tasks if task_code in raw_file.name]
+        assert len(task) in (0, 1), len(task)
+        if not len(task):
             continue
-        # TODO: This should move to "bidsify.py" and update metadata before writing
-        refit_option = refit_options.get(raw_file.name, {})
+        task = task[0]
+        refit_option = refit_options.get(raw_file.name, {}).copy()
+        refit_option.pop("refit", None)  # remove 'refit' key if present
         info = mne.io.read_info(raw_file)
         kwargs = dict(locs=False, amplitudes=False, dist_limit=0.03, colinearity_limit=0.01, verbose=False)
         kwargs.update(refit_option)
@@ -75,16 +84,27 @@ for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
         if why:
             # Generate report figures
             figs = list()
+            try:
+                trans = mne.read_trans(
+                    subjects_dir / f"{subject}_{task}" / f"{subject}_{task}_trans.fif"
+                )
+            # ...if it doesn't exist, the non-task-specific is the correct one
+            except FileNotFoundError:
+                trans = mne.read_trans(subjects_dir / subject / f"{subject}_trans.fif")
+                plot_subject = subject
+            else:
+                plot_subject = f"{subject}_{task}"
             for this_info in (info, new_info):
                 fig = mne.viz.create_3d_figure(bgcolor="w", size=(800, 800))
-                mne.viz.plot_alignment(this_info, trans, subject, subjects_dir, coord_frame="meg", fig=fig, dig=True)
+                mne.viz.plot_alignment(this_info, trans, subject=plot_subject, subjects_dir=subjects_dir, coord_frame="meg", fig=fig, dig=True)
                 figs.append(fig)
             with mne.report.open_report(report_file, title="check-dev-head-t report") as report:
                 report.add_html(
-                    "<br>".join(why), title=f"{print_name} info", section=subj, replace=True,
+                    "<br>".join(why), title=f"{print_name} info", section=subject, replace=True,
                 )
                 report.add_figure(
-                    figs, title=f"{print_name} alignment", section=subj, replace=True,
+                    figs, title=f"{print_name} alignment", section=subject, replace=True,
                 )
+                report.save(report_file.with_suffix(".html"), overwrite=True, open_browser=False)
             for fig in figs:
                 mne.viz.close_3d_figure(fig)

@@ -1,3 +1,10 @@
+# This file is used both by check-dev-head-t.py and bidsify.py.
+# It allows kwargs to be passed to the refit_hpi function, and determines
+# which files are actually refit during bidsification. The mapping is:
+#
+# Filename:
+#  refit: bool (whether or not to refit in the bidsify.py script)
+#  kwarg: value (passed to refit_hpi function)
 bad_105_am_raw.fif:
   dist_limit: 0.04
 bad_207_ids_raw.fif:

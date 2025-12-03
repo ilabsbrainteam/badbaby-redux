@@ -113,6 +113,10 @@ df = None
 with open(prep_dir / "bad-channels.yaml") as fid:
     prebads = yaml.safe_load(fid)
 
+# load the list of bad dev_head_t files with refit options
+with open(prep_dir / "refit-options.yml", "r") as fid:
+    refit_options = yaml.load(fid, Loader=yaml.SafeLoader)
+
 # we write MRI data once per subj, but we need a raw file loaded in order to properly
 # write the `trans` information. Use a signal variable to avoid writing more than once.
 last_anat_written = None
@@ -214,6 +218,12 @@ for data_folder in orig_data.rglob("bad_*/raw_fif/"):
                     df = this_df
                 else:
                     df = pd.concat((df, this_df), axis="index", ignore_index=True)
+            # fix dev_head_t if needed
+            refit_option = refit_options.get(raw_file.name, {}).copy()
+            if refit_option.pop("refit", False):
+                kwargs = dict(locs=False, amplitudes=False, dist_limit=0.03, colinearity_limit=0.01, verbose=True)
+                kwargs.update(refit_option)
+                mne.chpi.refit_hpi(raw.info, **kwargs)
             # write the raw data in the BIDS folder tree
             bids_path.update(task=task_name)
             write_raw_bids(
