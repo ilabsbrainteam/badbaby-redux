@@ -21,6 +21,8 @@ from mne_bids_pipeline.typing import (
 
 root: PathLike = Path("/storage/badbaby-redux")
 
+_pipeline_root: PathLike = root / "pipeline"  # ours
+
 bids_root: PathLike | None = root / "bids-data"
 """
 Specify the BIDS root directory. Pass an empty string or ```None` to use
@@ -149,8 +151,7 @@ The BIDS `space` entity.
 """
 
 subjects: Sequence[str] | Literal["all"] = "all"
-#with open("subs-extra-ecg-proj.yaml") as fid:
-#    subjects = safe_load(fid)
+# subjects = safe_load((_pipeline_root / "subs-extra-ecg-proj.yaml").read_text("utf-8"))
 """
 Subjects to analyze. If `'all'`, include all subjects. To only
 include a subset of subjects, pass a list of their identifiers. Even
@@ -1323,8 +1324,7 @@ otherwise, SSP won't be able to "see" these artifacts.
     ```
 """
 
-with open("ecg-mags.yaml") as fid:
-    ecg_mags = safe_load(fid)
+ecg_mags = safe_load((_pipeline_root / "ecg-mags.yaml").read_text("utf-8"))
 ssp_ecg_channel = {k: v for k, v in ecg_mags.items() if v is not None}
 ssp_ecg_channel = "MEG0113"
 # ssp_ecg_channel: str | dict[str, str] | None = None

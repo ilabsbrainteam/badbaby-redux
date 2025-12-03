@@ -19,6 +19,8 @@ from mne_bids_pipeline.typing import (
 
 root: PathLike = Path("/storage/badbaby-redux")
 
+_pipeline_root: PathLike = root / "pipeline"  # ours
+
 # %%
 # # General settings
 bids_root: PathLike | None = root / "bids-data"
@@ -149,8 +151,7 @@ task: str = "AmplitudeModulatedTones"
 # """
 
 subjects: Sequence[str] | Literal["all"] = "all"
-# with open("subs-extra-ecg-proj.yaml") as fid:
-#     subjects = safe_load(fid)
+# subjects = safe_load((_pipeline_root / "subs-extra-ecg-proj.yaml").read_text("utf-8"))
 # """
 # Subjects to analyze. If `'all'`, include all subjects. To only
 # include a subset of subjects, pass a list of their identifiers. Even
@@ -1253,8 +1254,7 @@ ssp_meg: Literal["separate", "combined", "auto"] = "auto"
 #     ```
 # """
 
-with open("ecg-mags.yaml") as fid:
-    ecg_mags = safe_load(fid)
+ecg_mags = safe_load((_pipeline_root / "ecg-mags.yaml").read_text("utf-8"))
 ssp_ecg_channel = {k: v for k, v in ecg_mags.items() if v is not None}
 del ecg_mags
 # ssp_ecg_channel: str | None = None
