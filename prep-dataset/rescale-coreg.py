@@ -102,6 +102,10 @@ for subject in subjects:
             ix = np.argmin(np.abs(surrogate_age - age / days_per_month))
             surrogate = surrogates[surrogate_age_str[ix]]
 
+        # Most subjs have all tasks on the same meas_date, so only specify task in
+        # folder/filename if needed (like we did for ERM)
+        subject_to = f"{subject}_{tasks[0]}" if extra_session else subject
+
         # shift the nasion
         fiducials = "auto"
         needs_shift = (
@@ -143,10 +147,6 @@ for subject in subjects:
                 coreg.fit_icp(n_iterations=10)
                 n_pts = new_n_pts
 
-        # Most subjs have all tasks on the same meas_date, so only specify task in
-        # folder/filename if needed (like we did for ERM)
-        subject_to = f"{subject}_{tasks[0]}" if extra_session else subject
-
         # scale the MRI (and save it to `subjects_dir`). This step takes a while.
         mne.scale_mri(
             subject_from=surrogate,
@@ -166,6 +166,7 @@ for subject in subjects:
         # 3-layer so let's use that for everyone
         bem_dir = subjects_dir / subject_to / "bem"
         bem_in = bem_dir / f"{subject_to}-5120-5120-5120-bem.fif"
+        bem_inout_1 = bem_dir / f"{subject_to}-5120-bem.fif"
         bem_out_3 = bem_dir / f"{subject_to}-5120-5120-5120-bem-sol.fif"
         bem_out_1 = bem_dir / f"{subject_to}-5120-bem-sol.fif"
         solution = mne.make_bem_solution(bem_in)
@@ -173,9 +174,10 @@ for subject in subjects:
         # we also want a 1-layer BEM to satisify MNE-BIDS-Pipeline
         # we could add a config value for MNE-BIDS-Pipeline, but the
         bem_surfaces = mne.read_bem_surfaces(bem_in)[-1:]
+        mne.write_bem_surfaces(bem_inout_1, bem_surfaces)
         assert bem_surfaces[0]["id"] == mne.io.constants.FIFF.FIFFV_BEM_SURF_ID_BRAIN, \
             f"{bem_surfaces[0]["id"]=} != {mne.io.constants.FIFF.FIFFV_BEM_SURF_ID_BRAIN}"
-        solution_1 = mne.make_bem_solution(bem_surfaces)
+        solution_1 = mne.make_bem_solution(bem_inout_1)
         mne.write_bem_solution(bem_out_1, solution_1)
 
 # QC the coregistrations
