@@ -166,9 +166,17 @@ for subject in subjects:
         # 3-layer so let's use that for everyone
         bem_dir = subjects_dir / subject_to / "bem"
         bem_in = bem_dir / f"{subject_to}-5120-5120-5120-bem.fif"
-        bem_out = bem_dir / f"{subject_to}-5120-5120-5120-bem-sol.fif"
+        bem_out_3 = bem_dir / f"{subject_to}-5120-5120-5120-bem-sol.fif"
+        bem_out_1 = bem_dir / f"{subject_to}-5120-bem-sol.fif"
         solution = mne.make_bem_solution(bem_in)
-        mne.write_bem_solution(bem_out, solution)
+        mne.write_bem_solution(bem_out_3, solution)
+        # we also want a 1-layer BEM to satisify MNE-BIDS-Pipeline
+        # we could add a config value for MNE-BIDS-Pipeline, but the
+        bem_surfaces = mne.read_bem_surfaces(bem_in)[-1:]
+        assert bem_surfaces[0]["id"] == mne.io.constants.FIFF.FIFFV_BEM_SURF_ID_BRAIN, \
+            f"{bem_surfaces[0]["id"]=} != {mne.io.constants.FIFF.FIFFV_BEM_SURF_ID_BRAIN}"
+        solution_1 = mne.make_bem_solution(bem_surfaces)
+        mne.write_bem_solution(bem_out_1, solution_1)
 
 # QC the coregistrations
 if qc:
