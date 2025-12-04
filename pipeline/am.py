@@ -61,7 +61,6 @@ baseline: tuple[float | None, float | None] | None = (-0.2, 0)
 spatial_filter: Literal["ssp", "ica"] | None = "ssp"
 n_proj_eog: dict[str, float] = dict(n_mag=0, n_grad=0, n_eeg=0)
 n_proj_ecg: dict[str, float] = dict(n_mag=3, n_grad=3, n_eeg=0)
-ssp_meg: Literal["separate", "combined", "auto"] = "auto"
 with open("ecg-mags.yaml") as fid:
     ecg_mags = safe_load(fid)
 ssp_ecg_channel = {k: v for k, v in ecg_mags.items() if v is not None}

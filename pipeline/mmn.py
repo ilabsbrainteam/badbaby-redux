@@ -70,7 +70,6 @@ n_proj_ecg: dict[str, float] = dict(n_mag=3, n_grad=3, n_eeg=0)
 with open("ecg-mags.yaml") as fid:
     ecg_mags = safe_load(fid)
 ssp_ecg_channel = {k: v for k, v in ecg_mags.items() if v is not None}
-ssp_ecg_channel = "MEG0113"
 del ecg_mags, fid
 reject: dict[str, float] | Literal["autoreject_global", "autoreject_local"] | None = (
     dict(grad=1500e-13, mag=6000e-15)
