@@ -1990,7 +1990,8 @@ algorithm with the T1-weighted images otherwise.
 *[FLASH MRI]: Fast low angle shot magnetic resonance imaging
 """
 
-recreate_bem: bool = True
+# TODO: Why recreate? We should fix the templates if needed
+recreate_bem: bool = False
 """
 Whether to re-create the BEM surfaces, even if existing surfaces have been
 found. If `False`, the BEM surfaces are only created if they do not exist
