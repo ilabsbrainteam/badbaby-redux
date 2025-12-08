@@ -1,5 +1,6 @@
 """Create BIDS folder structure for "badbaby" data."""
 
+import argparse
 from pathlib import Path
 from warnings import filterwarnings
 
@@ -27,13 +28,6 @@ from utils import hardlink
 verify_events_against_tab_files = True
 
 mne.set_log_level("WARNING")
-# suppress messages about IAS / MaxShield
-filterwarnings(
-    action="ignore",
-    message="This file contains raw Internal Active Shielding data",
-    category=RuntimeWarning,
-    module="mne",
-)
 # suppress message about bad filename `*raw2.fif`
 filterwarnings(
     action="ignore",
@@ -62,6 +56,15 @@ filterwarnings(
     category=RuntimeWarning,
     module="mne_bids",
 )
+
+# allow passing a subject or multiple subjects via command line
+parser = argparse.ArgumentParser(
+    description="Create BIDS folder structure for badbaby data",
+)
+parser.add_argument("SUBJECTS", type=str, nargs="+", help="Subject IDs to process")
+args = parser.parse_args()
+subjects_to_process = set(args.SUBJECTS)
+overwrite = bool(subjects_to_process)  # allow overwriting if specific subjects given
 
 # path stuff
 root = Path("/storage/badbaby-redux").resolve()
@@ -105,7 +108,7 @@ event_mappings = dict(
     mmn={"standard": 302, "deviant/ba": 303, "deviant/wa": 304},
 )
 
-read_raw_kw = dict(allow_maxshield=True, preload=False)
+read_raw_kw = dict(allow_maxshield="yes", preload=False)
 
 df = None
 
@@ -134,6 +137,8 @@ for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
         session = "c"
     # BIDS requires subj to be a string, but cast to int as a failsafe first
     subj = str(int(subj[:3]))
+    if subjects_to_process and subj not in subjects_to_process:
+        continue
     bids_path.update(subject=subj, session=session)
 
     # look for ERM files
@@ -282,7 +287,10 @@ for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
                 )
                 mri_path = BIDSPath(root=bids_root, subject=subj, session=session)
                 nii_file = write_anat(
-                    image=t1_fname, bids_path=mri_path, landmarks=landmarks
+                    image=t1_fname,
+                    bids_path=mri_path,
+                    landmarks=landmarks,
+                    overwrite=overwrite,
                 )
                 # update our signal variable
                 last_anat_written = anat_to_write

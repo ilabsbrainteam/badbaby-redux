@@ -53,14 +53,21 @@ mf_mc_dist_limit: float = 0.01
 mf_mc_rotation_velocity_limit: float | None = 30  # deg/s
 mf_mc_translation_velocity_limit: float | None = 0.025  # 25 mm/s
 mf_extra_kws: dict[str, Any] = dict(bad_condition="ignore")
-l_freq: float | None = 0.1
-h_freq: float | None = 50.0
+l_freq: float | None = 0.5
+h_freq: float | None = 40.0
+h_trans_bandwidth: float = 5.0
+# there are three peaks for 130a-noise: most prominent at 28.8, second at 29.4,
+# third at 29.8, so let's put the notch filter at 29.3 and make it 5 Hz wide
+# notch_freq: Sequence[float] | None = [29.3, 44.95, 60, 74.9, 104.9]
+# notch_trans_bandwidth: float = 1
+# notch_widths: Sequence[float] | float | None = 1.0
 raw_resample_sfreq: float | None = 600
 
 # %%
 # ## Epoching
 
 conditions: Sequence[str] | dict[str, str] | None = ["standard", "deviant", "deviant/ba", "deviant/wa"]
+epochs_decim: int = 3  # to 200 Hz
 epochs_tmin: float = -0.2
 epochs_tmax: float = 1.02  # 320 ms (stim dur) plus 700 ms (response)
 baseline: tuple[float | None, float | None] | None = (-0.2, 0)
@@ -71,7 +78,7 @@ ecg_mags = safe_load((_pipeline_root / "ecg-mags.yaml").read_text("utf-8"))
 ssp_ecg_channel = {k: v for k, v in ecg_mags.items() if v is not None}
 del ecg_mags
 reject: dict[str, float] | Literal["autoreject_global", "autoreject_local"] | None = (
-    dict(grad=1500e-13, mag=6000e-15)
+    dict(grad=1500e-13, mag=3000e-15)
 )
 
 # %%
