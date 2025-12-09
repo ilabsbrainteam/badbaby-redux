@@ -6,6 +6,7 @@ bidsify.py. Set ``refit: True`` for those subjects in prep-dataset/refit-options
 """
 
 from pathlib import Path
+import numpy as np
 import mne
 import yaml
 
@@ -24,7 +25,7 @@ with open(outdir.parent / "refit-options.yml", "r") as fid:
     refit_options = yaml.load(fid, Loader=yaml.SafeLoader)
 report_file = outdir / "dev-head-t-report.h5"
 subjects_dir = root / "anat"
-check_runs = set("bad_317a_mmn_raw.fif".split())
+check_runs = set()  # "bad_317a_mmn_raw.fif".split())
 
 data_folders = sorted(orig_data.rglob("bad_*/raw_fif/"))
 all_files = set(sum((list(file.name for file in data_folder.iterdir()) for data_folder in data_folders), []))
@@ -44,6 +45,7 @@ for data_folder in data_folders:
     subj = str(int(subj[:3]))
     erm_files = list(data_folder.glob("*_erm_raw.fif"))
     nl = "\n"
+    last_order = None
     for raw_file in sorted(data_folder.iterdir()):
         if raw_file.name in bad_files:
             continue
@@ -62,6 +64,18 @@ for data_folder in data_folders:
         refit_option = refit_options.get(raw_file.name, {}).copy()
         refit_option.pop("refit", None)  # remove 'refit' key if present
         info = mne.io.read_info(raw_file)
+        why = list()
+        assert len(info["hpi_results"]) == 1
+        this_order = info["hpi_results"][-1]["order"]
+        if last_order is None:
+            last_order = this_order
+        # N.B: A lot of these will be false alarms b/c Neuromag software doesn't seem
+        # to reliably choose the order of the 2 coils that were not used for fitting
+        # the dev_head_t, so two of the five can swap somewhat often
+        if not np.array_equal(this_order, last_order):
+            why.append(f"order mismatch  {this_order} != {last_order}")
+            print(f"{nl}{raw_file.name.ljust(30)} {why[-1]}")
+            nl = ""
         verbose = raw_file.name in check_runs
         if verbose:
             print(raw_file.name)
@@ -79,7 +93,6 @@ for data_folder in data_folders:
             distance_units="mm",
         )
         print_name = raw_file.name.ljust(30)
-        why = list()
         if ang_d > 20 or dist_d > 15:  # 20 deg or 1.5 cm
             why.append(f"refit delta      {ang_d:5.1f}° {dist_d:5.1f} mm")
             print(f"{nl}{print_name} {why[-1]}")

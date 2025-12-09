@@ -125,6 +125,7 @@ with open(prep_dir / "refit-options.yml", "r") as fid:
 last_anat_written = None
 
 # classify raw files by "task" from the filenames
+unprocessed = sorted(subjects_to_process)
 for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
     # extract the subject ID
     full_subj = data_folder.parts[-2]
@@ -139,6 +140,9 @@ for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
     subj = str(int(subj[:3]))
     if subjects_to_process and subj not in subjects_to_process:
         continue
+    if subjects_to_process:
+        if subj in unprocessed:
+            unprocessed.remove(subj)
     bids_path.update(subject=subj, session=session)
 
     # look for ERM files
@@ -295,7 +299,7 @@ for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
                 # update our signal variable
                 last_anat_written = anat_to_write
             # write the bad channels
-            if compound_subj_name in prebads:
+            if prebads[compound_subj_name]:
                 mark_channels(
                     bids_path=bids_path,
                     ch_names=[f"MEG{ch}" for ch in prebads[compound_subj_name]],
@@ -310,6 +314,8 @@ for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
             print(
                 f"{subj} {session} {task_code: >3} completed ({len(events): >3} events)"
             )
+if unprocessed:
+    raise RuntimeError(f"Some subjects were not processed: {unprocessed}")
 
-if verify_events_against_tab_files:
+if verify_events_against_tab_files and not subjects_to_process:
     df.to_csv(outdir / "log-of-fif-to-tab-matches.csv")

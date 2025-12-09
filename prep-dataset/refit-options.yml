@@ -28,3 +28,7 @@ bad_134a_am_raw.fif:
 bad_223a_mmn_raw.fif:
   refit: true
   dist_limit: 0.02
+
+# Just a bigger dist_limit
+bad_317a_mmn_raw.fif:
+  dist_limit: 0.02
