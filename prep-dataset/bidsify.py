@@ -5,11 +5,13 @@ from pathlib import Path
 from warnings import filterwarnings
 
 import mne
+import numpy as np
 import pandas as pd
 import yaml
 from mne_bids import (
     BIDSPath,
     get_anat_landmarks,
+    get_head_mri_trans,
     mark_channels,
     write_anat,
     write_meg_calibration,
@@ -61,7 +63,7 @@ filterwarnings(
 parser = argparse.ArgumentParser(
     description="Create BIDS folder structure for badbaby data",
 )
-parser.add_argument("SUBJECTS", type=str, nargs="+", help="Subject IDs to process")
+parser.add_argument("SUBJECTS", type=str, nargs="*", help="Subject IDs to process")
 args = parser.parse_args()
 subjects_to_process = set(args.SUBJECTS)
 overwrite = bool(subjects_to_process)  # allow overwriting if specific subjects given
@@ -295,6 +297,18 @@ for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
                     bids_path=mri_path,
                     landmarks=landmarks,
                     overwrite=overwrite,
+                )
+                # make sure our written trans is identical to numerical precision
+                trans_bids = get_head_mri_trans(
+                    bids_path,
+                    t1_bids_path=nii_file,
+                    fs_subject=compound_subj_name,
+                    fs_subjects_dir=anat_path.parent,
+                )
+                assert trans["to"] == trans_bids["to"]
+                assert trans["from"] == trans_bids["from"]
+                np.testing.assert_allclose(
+                    trans["trans"], trans_bids["trans"], atol=1e-6,
                 )
                 # update our signal variable
                 last_anat_written = anat_to_write

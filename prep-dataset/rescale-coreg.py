@@ -19,13 +19,13 @@ import pandas as pd
 parser = argparse.ArgumentParser(
     description="Create scaled anatomies for badbaby data",
 )
-parser.add_argument("SUBJECTS", type=str, nargs="+", help="Subject IDs to process")
+parser.add_argument("SUBJECTS", type=str, nargs="*", help="Subject IDs to process",)
 args = parser.parse_args()
 subjects_to_process = set(args.SUBJECTS)
 
 # configurable params
-qc = True
-scaling_already_done = True
+qc = False
+scaling_already_done = False
 do_nasion_shift = True
 nasion_shift_xyz = np.array([0, 0, 0.03])  # in meters!
 
@@ -87,7 +87,10 @@ good_fiducials = {
 }
 # generate the MRI config files for scaling surrogate MRI to individual
 # subject's digitization points. Then scale the MRI and make the BEM solution.
+subject_break = False
 for subject in subjects:
+    if subject_break:
+        break
     if subjects_to_process and subject not in subjects_to_process:
         continue
     # terminal message
@@ -242,6 +245,7 @@ for subject in subjects:
                 + ("(Nasion shift applied)\n" if needs_shift and do_nasion_shift else "")
             )
             if response.lower().startswith("x"):
+                subject_break = True
                 break
             elif response.lower().startswith("c"):
                 # run coregistration GUI to do it manually and compare
