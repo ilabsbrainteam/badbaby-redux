@@ -1,4 +1,4 @@
-"""Settings for AM data processing and analysis."""
+"""Settings for MMN and AM data processing and analysis."""
 
 from collections.abc import Callable, Sequence
 from pathlib import Path
@@ -10,6 +10,7 @@ from mne import Covariance
 from mne_bids import BIDSPath
 
 from mne_bids_pipeline.typing import (
+    ArbitraryContrast,
     FloatArrayLike,
     PathLike,
 )
@@ -23,9 +24,13 @@ bids_root: PathLike | None = root / "bids-data"
 subjects_dir: PathLike | None = bids_root / "derivatives" / "freesurfer" / "subjects"
 sessions: list[str] | Literal["all"] = ["a", "b"]
 allow_missing_sessions: bool = True
-task: str = "AmplitudeModulatedTones"
+task: list[str] | str = ["AmplitudeModulatedTones", "SyllableMismatchNegativity"]
 subjects: Sequence[str] | Literal["all"] = "all"
 # subjects = safe_load((_pipeline_root / "subs-extra-ecg-proj.yaml").read_text("utf-8"))
+exclude_subjects: Sequence[str] = [
+    '232',  # session b only has `ba` deviant, not `wa` deviant
+    '233',  # session b only has `ba` deviant, not `wa` deviant
+]
 ch_types: Annotated[Sequence[Literal["meg", "mag", "grad", "eeg"]], Len(1, 4)] = ["meg"]
 data_type: Literal["meg", "eeg"] | None = "meg"
 reader_extra_params: dict[str, Any] = dict(allow_maxshield="yes")
@@ -36,6 +41,7 @@ random_state: int | None = 8675309
 
 find_flat_channels_meg: bool = True
 find_noisy_channels_meg: bool = True
+find_bad_channels_extra_kws: dict[str, Any] = dict(bad_condition="ignore")
 use_maxwell_filter: bool = True
 mf_st_duration: float | None = 6.0  # shorter because they move a lot
 mf_st_correlation: float = 0.95  # TODO if bandpassed first, increase to 0.98
@@ -60,10 +66,16 @@ raw_resample_sfreq: float | None = 600
 # %%
 # ## Epoching
 
-conditions: Sequence[str] | dict[str, str] | None = ["amtone"]
+conditions = {
+    "AmplitudeModulatedTones": ["amtone"],
+    "SyllableMismatchNegativity": ["standard", "deviant", "deviant/ba", "deviant/wa"],
+}
 epochs_decim: int = 3  # to 200 Hz
 epochs_tmin: float = -0.2
-epochs_tmax: float = 1.7
+epochs_tmax = {
+    "AmplitudeModulatedTones": 1.7,
+    "SyllableMismatchNegativity": 1.02,  # 320 ms (stim dur) plus 700 ms (response)
+}
 baseline: tuple[float | None, float | None] | None = (-0.2, 0)
 
 # %%
@@ -79,9 +91,22 @@ reject: dict[str, float] | Literal["autoreject_global", "autoreject_local"] | No
 )
 
 # %%
+# # Sensor-level analysis
+
+contrasts = [
+    dict(
+        name="MMN",
+        conditions=("deviant", "standard"),
+        weights=(1, -1),
+        task="SyllableMismatchNegativity",
+    ),
+]
+
 # ## Decoding / MVPA
 
 decode: bool = False
+decoding_epochs_tmin: float | None = 0.
+decoding_epochs_tmax: float | None = 0.75
 
 # %%
 # # Source-level analysis
