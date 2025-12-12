@@ -1,13 +1,14 @@
 # TODO: Make sure all are accounted for, and add empty-room bads using e.g.:
 #
-# $ SUBJ=116a mne browse_raw data/bad_$SUBJ/raw_fif/bad_$SUBJ_am_raw.fif --allowmaxshield --lowpass 40 && mne browse_raw data/bad_$SUBJ/raw_fif/bad_$SUBJ_erm_raw.fif
+# $ SUBJ=116a mne browse_raw data/bad_$SUBJ/raw_fif/bad_${SUBJ}_am_raw.fif --allowmaxshield --lowpass 40 && mne browse_raw data/bad_$SUBJ/raw_fif/bad_${SUBJ}_erm_raw.fif --allowmaxshield --lowpass 40
 #
 # Subjects with non-session-specific anat:
 # 101, 102, 103, 104, 105, 106, 108, 109, 110, 111, 112, 113, 114, 116,
 # 202, 203, 205, 206, 207, 208, 212, 213, 214, 217
 
-# sub-116_ses-a: []
-sub-116_ses-b: ["0313"]
+sub-116_ses-a: ["0142", "0413", "0743", "0743", "1533", "1722", "1941", "2623"]  # from ERM: 0142, 1722, 1941
+sub-116_ses-b: ["0313", "0441", "1413", "1823", "1931", "2112", "2623"]  # from ERM: 1413, 1823, 1931, 2623
+sub-116_ses-c: ["0142", "0413", "0742", "0743", "1533", "1722", "1941", "2623"]  # from ERM: 0142, 1941, 2623
 # sub-117_ses-a: []
 sub-117_ses-b: ["1413"]
 # sub-119_ses-a: []
