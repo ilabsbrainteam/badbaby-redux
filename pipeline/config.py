@@ -5,12 +5,11 @@ from pathlib import Path
 from typing import Annotated, Any, Literal
 from yaml import safe_load
 
-from annotated_types import Ge, Interval, Len, MinLen
+from annotated_types import Len
 from mne import Covariance
 from mne_bids import BIDSPath
 
 from mne_bids_pipeline.typing import (
-    ArbitraryContrast,
     FloatArrayLike,
     PathLike,
 )
