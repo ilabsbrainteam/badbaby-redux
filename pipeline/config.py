@@ -92,14 +92,15 @@ reject: dict[str, float] | Literal["autoreject_global", "autoreject_local"] | No
 # %%
 # # Sensor-level analysis
 
-contrasts = [
-    dict(
-        name="MMN",
-        conditions=("deviant", "standard"),
-        weights=(1, -1),
-        task="SyllableMismatchNegativity",
-    ),
-]
+contrasts = dict(
+    SyllableMismatchNegativity=[
+        dict(
+            name="MMN",
+            conditions=("deviant", "standard"),
+            weights=(1, -1),
+        ),
+    ],
+)
 
 # ## Decoding / MVPA
 
