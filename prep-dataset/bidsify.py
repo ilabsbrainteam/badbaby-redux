@@ -247,6 +247,9 @@ for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
             anat_to_write = (subj, session)
             compound_subj_name = f"sub-{subj}_ses-{session}"
             if last_anat_written != anat_to_write:
+                # update our signal variable
+                last_anat_written = anat_to_write
+
                 anat_path = (
                     bids_root
                     / "derivatives"
@@ -304,8 +307,18 @@ for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
                 np.testing.assert_allclose(
                     trans["trans"], trans_bids["trans"], atol=1e-6,
                 )
-                # update our signal variable
-                last_anat_written = anat_to_write
+                # make a copy of the source space using the filename that
+                # MNE-BIDS-Pipeline prefers and the subject_his_id set correctly
+                # (otherwise forward modeling reasonably complains)
+                src_in = anat_path / "bem" / f"{compound_subj_name}-oct-6-src.fif"
+                src_out = anat_path / "bem" / f"{compound_subj_name}-oct6-src.fif"
+                assert src_in.is_file()
+                assert not src_out.is_file()
+                src = mne.read_source_spaces(src_in)
+                for s in src:
+                    s["subject_his_id"] = compound_subj_name
+                mne.write_source_spaces(src_out, src, overwrite=True)
+
             # write the bad channels
             if prebads[compound_subj_name]:
                 mark_channels(
