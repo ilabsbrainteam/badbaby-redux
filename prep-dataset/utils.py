@@ -8,3 +8,10 @@ def hardlink(source, target, dry_run=True):
     cmd = ["cp", "-l", "--update=none", "--preserve=all", str(source), str(target)]
     if not dry_run:
         check_call(cmd)
+
+
+tasks = dict(
+    am="AMTone",
+    ids="InfDir",
+    mmn="SylMMN",
+)

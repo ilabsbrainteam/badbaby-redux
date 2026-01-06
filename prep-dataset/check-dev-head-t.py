@@ -9,18 +9,13 @@ from pathlib import Path
 import numpy as np
 import mne
 import yaml
+from utils import tasks
 
 root = Path("/storage/badbaby-redux").resolve()
 orig_data = root / "data"
 outdir = root / "prep-dataset" / "qc"
 with open(outdir.parent / "bad-files.yaml", "r") as fid:
     bad_files = yaml.load(fid, Loader=yaml.SafeLoader)
-# tasks
-tasks = dict(
-    am="AmplitudeModulatedTones",
-    ids="InfantDirectedSpeech",
-    mmn="SyllableMismatchNegativity",
-)
 with open(outdir.parent / "refit-options.yml", "r") as fid:
     refit_options = yaml.load(fid, Loader=yaml.SafeLoader)
 report_file = outdir / "dev-head-t-report.h5"

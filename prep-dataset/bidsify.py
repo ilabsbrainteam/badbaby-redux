@@ -25,7 +25,7 @@ from score import (
     parse_mmn_events,
 )
 
-from utils import hardlink
+from utils import hardlink, tasks
 
 verify_events_against_tab_files = True
 
@@ -95,13 +95,6 @@ for log in logs:
 with open(prep_dir / "bad-files.yaml", "r") as fid:
     bad_files = yaml.load(fid, Loader=yaml.SafeLoader)
 
-# tasks
-tasks = dict(
-    am="AmplitudeModulatedTones",
-    ids="InfantDirectedSpeech",
-    mmn="SyllableMismatchNegativity",
-)
-
 # event mappings
 generic_events = dict(BAD_ACQ_SKIP=999)
 event_mappings = dict(
@@ -138,6 +131,7 @@ for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
         session = "b"
     else:
         session = "c"
+        continue  # skip session c for now
     # BIDS requires subj to be a string, but cast to int as a failsafe first
     subj = str(int(subj[:3]))
     if subjects_to_process and subj not in subjects_to_process:

@@ -1,5 +1,6 @@
 """Settings for MMN and AM data processing and analysis."""
 
+import sys
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Annotated, Any, Literal
@@ -14,6 +15,13 @@ from mne_bids_pipeline.typing import (
     PathLike,
 )
 
+# Get our task mapping strings
+sys.path.insert(0, str(Path(__file__).parent.parent / "prep-dataset"))
+from utils import tasks as _task_mapping
+sys.path.pop(0)
+_AM_str, _MMN_str = _task_mapping["am"], _task_mapping["mmn"]
+del _task_mapping
+
 # %%
 # # General settings
 
@@ -23,7 +31,7 @@ bids_root: PathLike | None = root / "bids-data"
 subjects_dir: PathLike | None = bids_root / "derivatives" / "freesurfer" / "subjects"
 sessions: list[str] | Literal["all"] = ["a", "b"]
 allow_missing_sessions: bool = True
-task: list[str] | str = ["AmplitudeModulatedTones", "SyllableMismatchNegativity"]
+task: list[str] | str = [_AM_str, _MMN_str]
 subjects: Sequence[str] | Literal["all"] = "all"
 # subjects = safe_load((_pipeline_root / "subs-extra-ecg-proj.yaml").read_text("utf-8"))
 exclude_subjects: Sequence[str] = [
@@ -66,14 +74,14 @@ raw_resample_sfreq: float | None = 600
 # ## Epoching
 
 conditions = {
-    "AmplitudeModulatedTones": ["amtone"],
-    "SyllableMismatchNegativity": ["standard", "deviant", "deviant/ba", "deviant/wa"],
+    _AM_str: ["amtone"],
+    _MMN_str: ["standard", "deviant", "deviant/ba", "deviant/wa"],
 }
 epochs_decim: int = 3  # to 200 Hz
 epochs_tmin: float = -0.2
 epochs_tmax = {
-    "AmplitudeModulatedTones": 1.7,
-    "SyllableMismatchNegativity": 1.02,  # 320 ms (stim dur) plus 700 ms (response)
+    _AM_str: 1.7,
+    _MMN_str: 1.02,  # 320 ms (stim dur) plus 700 ms (response)
 }
 baseline: tuple[float | None, float | None] | None = (-0.2, 0)
 
@@ -93,18 +101,14 @@ reject: dict[str, float] | Literal["autoreject_global", "autoreject_local"] | No
 # # Sensor-level analysis
 
 contrasts = {
-    "SyllableMismatchNegativity": [
-        ("deviant", "standard")
-    ],
+    _MMN_str: [("deviant", "standard")],
 }
 
 # ## Decoding / MVPA
 
-decoding_time: bool = False
-# This takes ages for our data, so just do full-epochs decoding for now
-# decoding_time_generalization_decim: int | None = 10  # 200 to 20 Hz
-# decoding_epochs_tmin: float | None = 0.
-# decoding_epochs_tmax: float | None = 0.75
+decoding_time_decim: int | None = 10  # 200 to 20 Hz
+decoding_epochs_tmin: float | None = 0.
+decoding_epochs_tmax: float | None = 0.75
 
 # %%
 # # Source-level analysis
