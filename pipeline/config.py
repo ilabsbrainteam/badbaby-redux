@@ -92,26 +92,23 @@ reject: dict[str, float] | Literal["autoreject_global", "autoreject_local"] | No
 # %%
 # # Sensor-level analysis
 
-contrasts = dict(
-    SyllableMismatchNegativity=[
-        dict(
-            name="MMN",
-            conditions=("deviant", "standard"),
-            weights=(1, -1),
-        ),
+contrasts = {
+    "SyllableMismatchNegativity": [
+        ("deviant", "standard")
     ],
-)
+}
 
 # ## Decoding / MVPA
 
-decode: bool = False
-decoding_epochs_tmin: float | None = 0.
-decoding_epochs_tmax: float | None = 0.75
+decoding_time: bool = False
+# This takes ages for our data, so just do full-epochs decoding for now
+# decoding_time_generalization_decim: int | None = 10  # 200 to 20 Hz
+# decoding_epochs_tmin: float | None = 0.
+# decoding_epochs_tmax: float | None = 0.75
 
 # %%
 # # Source-level analysis
 
-spacing: Literal["oct5", "oct6", "ico4", "ico5", "all"] | int = "ico4"
 inverse_method: Literal["MNE", "dSPM", "sLORETA", "eLORETA"] = "eLORETA"
 noise_cov: (
     tuple[float | None, float | None]

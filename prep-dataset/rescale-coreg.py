@@ -16,6 +16,8 @@ from mne.io.constants import FIFF
 import numpy as np
 import pandas as pd
 
+from utils import hardlink
+
 parser = argparse.ArgumentParser(
     description="Create scaled anatomies for badbaby data",
 )
@@ -25,7 +27,7 @@ subjects_to_process = set(args.SUBJECTS)
 
 # configurable params
 qc = False
-scaling_already_done = False
+scaling_already_done = True
 do_nasion_shift = True
 nasion_shift_xyz = np.array([0, 0, 0.03])  # in meters!
 
@@ -218,6 +220,11 @@ for subject in subjects:
                 f"{bem_surfaces[0]["id"]=} != {mne.io.constants.FIFF.FIFFV_BEM_SURF_ID_BRAIN}"
             solution_1 = mne.make_bem_solution(bem_inout_1)
             mne.write_bem_solution(bem_out_1, solution_1)
+            # make a link to the filename that MNE-BIDS-Pipeline prefers
+            src_in = bem_dir / f"{subject_to}-oct-6-src.fif"
+            src_out = bem_dir / f"{subject_to}-oct6-src.fif"
+            assert src_in.is_file()
+            hardlink(src_in, src_out, dry_run=False)
 
         # QC the coregistrations
         if qc:

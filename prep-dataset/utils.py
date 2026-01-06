@@ -1,4 +1,4 @@
-from subprocess import run
+from subprocess import check_call
 
 
 def hardlink(source, target, dry_run=True):
@@ -7,4 +7,4 @@ def hardlink(source, target, dry_run=True):
     # even with sudo `--preserve=all` doesn't work, so chown too
     cmd = ["cp", "-l", "--update=none", "--preserve=all", str(source), str(target)]
     if not dry_run:
-        run(cmd)
+        check_call(cmd)
