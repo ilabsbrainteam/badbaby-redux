@@ -1,6 +1,9 @@
 sub-116:
   ses-a:
-    AMTone: null
+    AMTone:
+    - MEG0413
+    - MEG1722
+    - MEG0121
     ERM:
     - MEG0142
     - MEG1722
@@ -13,6 +16,8 @@ sub-116:
   ses-b:
     AMTone:
     - MEG0313
+    - MEG2112
+    - MEG0411
     ERM:
     - MEG1413
     - MEG1823
@@ -26,21 +31,46 @@ sub-116:
     - MEG2112
 sub-117:
   ses-a:
-    AMTone: null
-    ERM: null
-    SylMMN: null
+    AMTone:
+    - MEG0422
+    - MEG0241
+    - MEG2221
+    ERM:
+    - MEG0142
+    - MEG0422
+    - MEG1042
+    - MEG1823
+    - MEG1722
+    - MEG2623
+    SylMMN:
+    - MEG0422
+    - MEG1541
+    - MEG2011
   ses-b:
     AMTone:
     - MEG1413
     ERM: null
-    SylMMN: null
+    SylMMN:
+    - MEG1413
+    - MEG2112
 sub-119:
   ses-a:
-    AMTone: null
-    ERM: null
-    SylMMN: null
+    AMTone:
+    - MEG2242
+    - MEG0641
+    - MEG2331
+    ERM:
+    - MEG0142
+    - MEG0422
+    - MEG1543
+    SylMMN:
+    - MEG2532
   ses-b:
-    AMTone: null
+    AMTone:
+    - MEG0713
+    - MEG2112
+    - MEG1631
+    - MEG2431
     ERM: null
     SylMMN: null
 sub-120:
