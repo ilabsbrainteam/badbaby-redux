@@ -108,6 +108,7 @@ read_raw_kw = dict(allow_maxshield="yes", preload=False)
 df = None
 
 # load the list of bad channels ("prebads") that were noted during acquisition
+# TODO: SWITCH TO "prebads.yaml"!
 with open(prep_dir / "bad-channels.yaml") as fid:
     prebads = yaml.safe_load(fid)
 
@@ -157,8 +158,12 @@ for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
         for task_code, task_name in tasks.items():
             if task_code not in raw_file.name:
                 continue
+            if task_code not in ("am", "mmn"):  # not doing "ids" for now
+                continue
             # load the data
             raw = mne.io.read_raw_fif(raw_file, **read_raw_kw)
+            # get the prebads
+            these_bads = prebads[subj][session][task_name]
             # check for experiment-specific ERM file
             task_specific_erm = list(filter(lambda f: task_code in f.name, erm_files))
             assert len(task_specific_erm) in (0, 1)
@@ -320,10 +325,10 @@ for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
                 mne.write_source_spaces(src_out, src, overwrite=True)
 
             # write the bad channels
-            if prebads[compound_subj_name]:
+            if these_bads:
                 mark_channels(
                     bids_path=bids_path,
-                    ch_names=[f"MEG{ch}" for ch in prebads[compound_subj_name]],
+                    ch_names=these_bads,
                     status="bad",
                     descriptions="prebad",
                 )
