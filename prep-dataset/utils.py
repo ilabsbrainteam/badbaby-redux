@@ -1,10 +1,17 @@
-from subprocess import run
+from subprocess import check_call
 
 
 def hardlink(source, target, dry_run=True):
     """Create target dirs, then hardlink."""
     target.parent.mkdir(parents=True, exist_ok=True)
     # even with sudo `--preserve=all` doesn't work, so chown too
-    cmd = ["cp", "-ln", "--preserve=all", str(source), str(target)]
+    cmd = ["cp", "-l", "--update=none", "--preserve=all", str(source), str(target)]
     if not dry_run:
-        run(cmd)
+        check_call(cmd)
+
+
+tasks = dict(
+    am="AMTone",
+    ids="InfDir",
+    mmn="SylMMN",
+)

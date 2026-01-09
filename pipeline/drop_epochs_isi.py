@@ -2,9 +2,12 @@ from pathlib import Path
 
 import mne
 
+from utils import tasks
+
 bids_root = Path("/storage/badbaby-redux/bids-data")
 deriv_root = bids_root / "derivatives" / "mne-bids-pipeline"
-fpaths = deriv_root.rglob("**/sub-*_ses-?_task-AmplitudeModulatedTones_epo.fif")
+task = tasks["am"]
+fpaths = deriv_root.rglob(f"**/sub-*_ses-?_task-{task}_epo.fif")
 
 
 def drop_epochs_with_short_isi(epochs: mne.Epochs, event: str) -> mne.Epochs:

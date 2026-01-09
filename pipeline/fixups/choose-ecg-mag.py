@@ -5,6 +5,7 @@ from pathlib import Path
 import mne
 import numpy as np
 
+from utils import tasks
 
 ecgpath = Path("../ecg-mags.yaml").resolve()
 with open(ecgpath) as fid:
@@ -13,7 +14,8 @@ with open(ecgpath) as fid:
 indir = Path(".").resolve()
 infiles = indir.glob("*.fif")
 
-pattern = r"(?P<sub>sub-\d{3})_(?P<ses>ses-[abc])_task-AmplitudeModulatedTones_proc-filt_raw.fif"
+task = tasks["am"]
+pattern = rf"(?P<sub>sub-\d{{3}})_(?P<ses>ses-[abc])_task-{task}_proc-filt_raw.fif"
 
 for infile in infiles:
     res = re.match(pattern, infile.name)

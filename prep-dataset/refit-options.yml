@@ -1,0 +1,34 @@
+# This file is used both by check-dev-head-t.py and bidsify.py.
+# It allows kwargs to be passed to the refit_hpi function, and determines
+# which files are actually refit during bidsification. The mapping is:
+#
+# Filename:
+#  refit: bool (whether or not to refit in the bidsify.py script)
+#  kwarg: value (passed to refit_hpi function)
+#
+# Existing reports can be examine with for example in reports/2025-05-06:
+# (opens 10 at once):
+#
+#     $ count=0; for HTML in *.html; do count=$(($count+1)); echo $HTML; google-chrome "file://$PWD/${HTML}#Sensor_alignment"; if (( $count % 10 == 0 )); then read; fi; done
+#
+
+# Original flipped
+bad_106_am_raw.fif:
+  refit: true
+bad_106_mmn_raw.fif:
+  refit: true
+bad_126a_mmn_raw.fif:  # original flipped, and matches am now (pointed a bit up and right)
+  refit: true
+bad_130b_mmn_raw.fif:  # original flipped and collides with helmet (thus missing source alignment in report)
+  refit: true
+
+# None of these are big differences, but our errors are lower and the tilt is more consistent
+bad_134a_am_raw.fif:
+  refit: true
+bad_223a_mmn_raw.fif:
+  refit: true
+  dist_limit: 0.02
+
+# Just a bigger dist_limit
+bad_317a_mmn_raw.fif:
+  dist_limit: 0.02
