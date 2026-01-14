@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 """Mark bad channels interactively."""
 
+# Skipping ses-c and ids for now!
+
 import re
 import socket
 import sys
@@ -92,7 +94,10 @@ def files_sort(path):
 
 
 raw_files_filt = sorted(
-    (raw_file for raw_file in raw_files if re.match(pattern, raw_file.name)),
+    (
+        raw_file for raw_file in raw_files if re.match(pattern, raw_file.name)
+        and match(raw_file.name)[1] != "ses-c"
+    ),
     key=files_sort,
 )
 assert raw_files_filt
@@ -138,6 +143,7 @@ if any_changed:
     save_prebads()
 
 counter = 0
+sub_ses_task = ""
 for ix, infile in enumerate(rev(raw_files)):
     sub, ses, task = match(infile.name)
     # skip session C for now to save time
@@ -154,12 +160,13 @@ for ix, infile in enumerate(rev(raw_files)):
     # option to skip ones already marked / annotated
     this_prebads = prebads[sub][ses][task]
     sub_ses_task = f"{sub} {ses} {task}"
+    prefix = f"{ix:>3}/{len(raw_files)} {sub_ses_task}"
     if this_prebads is not None:
-        resp = input(f"{sub_ses_task}: existing bads {this_prebads}. Skip? [y/N] ")
+        resp = input(f"{prefix}: existing bads {this_prebads}. Skip? [y/N] ")
         if len(resp) and resp.lower()[0] == "y":
             continue
     else:
-        print(f"{sub_ses_task}: no existing bads")
+        print(f"{prefix} no existing bads")
     # load the raw
     print("  loading...", end="", flush=True)
     raw = mne.io.read_raw_fif(infile, preload=True, verbose=False, allow_maxshield=True)
@@ -189,6 +196,7 @@ for ix, infile in enumerate(rev(raw_files)):
         overview_mode="channels",
         lowpass=40 if not resample else None,
         use_opengl=True,
+        clipping=None,
     )
     # save any changes to annotations
     if "BAD_USER" in raw.annotations.description:
@@ -199,7 +207,7 @@ for ix, infile in enumerate(rev(raw_files)):
     # save changes to disk after every file
     save_prebads()
     # offer chance to quit cleanly
-    resp = input(f"{sub_ses_task}: assigned bads {chs}. Continue? [Y/n] ")
+    resp = input(f"{prefix} assigned bads {chs}. Continue? [Y/n] ")
     if len(resp) and resp.lower()[0] != "y":
         break
 
