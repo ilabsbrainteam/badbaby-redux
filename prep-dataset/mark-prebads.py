@@ -10,6 +10,8 @@ import yaml
 from pathlib import Path
 from warnings import filterwarnings
 
+import numpy as np
+
 sys.path.insert(0, str(Path(__file__).parent))
 from utils import tasks
 sys.path.pop(0)
@@ -183,6 +185,17 @@ for ix, infile in enumerate(rev(raw_files)):
         raw.set_annotations(ann)
     # set channels we've already marked as bad, then plot
     raw.info["bads"].extend(this_prebads or list())
+    # TODO: Run through 190 (sub-308) with this enabled
+    # Automatically find some flat channels (though they can still go flat
+    # partway through, usually this is accompanied by a bad jump or something visible)
+    meg_picks = mne.pick_types(raw.info, meg=True, eeg=False, exclude="bads")
+    new_flat = [
+        raw.ch_names[meg_picks[fl]]
+        for fl in np.where(np.std(raw.get_data(picks=meg_picks), axis=1) < 1e-14)[0]
+    ]
+    if new_flat:
+        print(f"  found {new_flat=}...", end="")
+        raw.info["bads"].extend(new_flat)
     print("  plotting...", end="", flush=True)
     fig = raw.plot(
         picks="data",
