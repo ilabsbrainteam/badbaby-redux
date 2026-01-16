@@ -112,7 +112,7 @@ decoding_epochs_tmax: float | None = 0.75
 # # Source-level analysis
 
 inverse_method: Literal["MNE", "dSPM", "sLORETA", "eLORETA"] = "eLORETA"
-cov_rank: Literal["info"] | dict(str, Any) = dict(tol_kind="relative", tol=1e-4)
+cov_rank: Literal["info"] | dict[str, Any] = dict(tol_kind="relative", tol=1e-4)
 noise_cov: (
     tuple[float | None, float | None]
     | Literal["emptyroom", "rest", "ad-hoc"]
