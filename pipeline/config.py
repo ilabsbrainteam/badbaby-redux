@@ -70,6 +70,16 @@ h_trans_bandwidth: float = 5.0
 # notch_widths: Sequence[float] | float | None = 1.0
 raw_resample_sfreq: float | None = 600
 
+spatial_filter: Literal["ssp", "ica"] | None = "ssp"
+n_proj_eog: dict[str, float] = dict(n_mag=0, n_grad=0, n_eeg=0)
+n_proj_ecg: dict[str, float] = dict(n_mag=3, n_grad=3, n_eeg=0)
+ecg_mags = safe_load((_pipeline_root / "ecg-mags.yaml").read_text("utf-8"))
+ssp_ecg_channel = {k: v for k, v in ecg_mags.items() if v is not None}
+del ecg_mags
+reject: dict[str, float] | Literal["autoreject_global", "autoreject_local"] | None = (
+    dict(grad=1500e-13, mag=3000e-15)
+)
+
 # %%
 # ## Epoching
 
@@ -84,18 +94,6 @@ epochs_tmax = {
     _MMN_str: 1.02,  # 320 ms (stim dur) plus 700 ms (response)
 }
 baseline: tuple[float | None, float | None] | None = (-0.2, 0)
-
-# %%
-# Preprocessing
-spatial_filter: Literal["ssp", "ica"] | None = "ssp"
-n_proj_eog: dict[str, float] = dict(n_mag=0, n_grad=0, n_eeg=0)
-n_proj_ecg: dict[str, float] = dict(n_mag=3, n_grad=3, n_eeg=0)
-ecg_mags = safe_load((_pipeline_root / "ecg-mags.yaml").read_text("utf-8"))
-ssp_ecg_channel = {k: v for k, v in ecg_mags.items() if v is not None}
-del ecg_mags
-reject: dict[str, float] | Literal["autoreject_global", "autoreject_local"] | None = (
-    dict(grad=1500e-13, mag=3000e-15)
-)
 
 # %%
 # # Sensor-level analysis
@@ -114,6 +112,7 @@ decoding_epochs_tmax: float | None = 0.75
 # # Source-level analysis
 
 inverse_method: Literal["MNE", "dSPM", "sLORETA", "eLORETA"] = "eLORETA"
+cov_rank: Literal["info"] | dict(str, Any) = dict(tol_kind="relative", tol=1e-4)
 noise_cov: (
     tuple[float | None, float | None]
     | Literal["emptyroom", "rest", "ad-hoc"]
