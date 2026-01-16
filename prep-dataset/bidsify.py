@@ -164,6 +164,7 @@ for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
             raw = mne.io.read_raw_fif(raw_file, **read_raw_kw)
             # get the prebads
             these_bads = prebads[subj][session][task_name]
+            erm_bads = prebads[subj][session]["ERM"]
             # check for experiment-specific ERM file
             task_specific_erm = list(filter(lambda f: task_code in f.name, erm_files))
             assert len(task_specific_erm) in (0, 1)
@@ -329,6 +330,15 @@ for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
                 mark_channels(
                     bids_path=bids_path,
                     ch_names=these_bads,
+                    status="bad",
+                    descriptions="prebad",
+                )
+            if erm_bads:
+                assert erm is not None
+                erm_path = bids_path.find_empty_room(use_sidecar_only=True)
+                mark_channels(
+                    bids_path=erm_path,
+                    ch_names=erm_bads,
                     status="bad",
                     descriptions="prebad",
                 )
