@@ -118,6 +118,7 @@ noise_cov: (
     | Literal["emptyroom", "rest", "ad-hoc"]
     | Callable[[BIDSPath], Covariance]
 ) = "emptyroom"  # (None, 0)
+smoothing_steps = 10
 
 # %%
 # # Parallelization
