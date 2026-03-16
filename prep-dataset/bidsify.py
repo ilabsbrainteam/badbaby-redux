@@ -65,7 +65,12 @@ parser = argparse.ArgumentParser(
 )
 parser.add_argument("SUBJECTS", type=str, nargs="*", help="Subject IDs to process")
 args = parser.parse_args()
-subjects_to_process = set(args.SUBJECTS)
+subjects_to_process = tuple(args.SUBJECTS)
+for si, subj in enumerate(subjects_to_process):
+    try:
+        int(subj)
+    except ValueError:
+        raise ValueError(f"Subject IDs must be integers, but got {subjects_to_process[si]=}")
 overwrite = bool(subjects_to_process)  # allow overwriting if specific subjects given
 
 # path stuff
@@ -109,7 +114,7 @@ df = None
 
 # load the list of bad channels ("prebads") that were noted during acquisition
 # TODO: SWITCH TO "prebads.yaml"!
-with open(prep_dir / "bad-channels.yaml") as fid:
+with open(prep_dir / "prebads.yaml") as fid:
     prebads = yaml.safe_load(fid)
 
 # load the list of bad dev_head_t files with refit options
@@ -161,10 +166,13 @@ for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
             if task_code not in ("am", "mmn"):  # not doing "ids" for now
                 continue
             # load the data
+            print(f"Processing {subj}{session} {task_name} from {data_folder} ...")
             raw = mne.io.read_raw_fif(raw_file, **read_raw_kw)
             # get the prebads
-            these_bads = prebads[subj][session][task_name]
-            erm_bads = prebads[subj][session]["ERM"]
+            subj_key = f"sub-{subj}"
+            sess_key = f"ses-{session}"
+            these_bads = prebads[subj_key][sess_key][task_name]
+            erm_bads = prebads[subj_key][sess_key]["ERM"]
             # check for experiment-specific ERM file
             task_specific_erm = list(filter(lambda f: task_code in f.name, erm_files))
             assert len(task_specific_erm) in (0, 1)
@@ -347,9 +355,7 @@ for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
             write_meg_calibration(cal_dir / "sss_cal.dat", bids_path=cal_path)
             write_meg_crosstalk(cal_dir / "ct_sparse.fif", bids_path=cal_path)
             # print progress message to terminal
-            print(
-                f"{subj} {session} {task_code: >3} completed ({len(events): >3} events)"
-            )
+            print(f"↳ completed with {len(events): >3} events")
 if unprocessed:
     raise RuntimeError(f"Some subjects were not processed: {unprocessed}")
 

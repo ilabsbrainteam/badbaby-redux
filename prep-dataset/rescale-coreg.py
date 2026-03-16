@@ -7,7 +7,9 @@ license: MIT
 """
 
 import argparse
+import time
 from collections import defaultdict
+from datetime import timedelta
 from pathlib import Path
 from yaml import safe_load
 
@@ -21,11 +23,11 @@ parser = argparse.ArgumentParser(
 )
 parser.add_argument("SUBJECTS", type=str, nargs="*", help="Subject IDs to process",)
 args = parser.parse_args()
-subjects_to_process = set(args.SUBJECTS)
+subjects_to_process = set(f"bad_{subject}" for subject in args.SUBJECTS)
 
 # configurable params
 qc = False
-scaling_already_done = True
+scaling_already_done = False
 do_nasion_shift = True
 nasion_shift_xyz = np.array([0, 0, 0.03])  # in meters!
 
@@ -40,7 +42,11 @@ subjects_dir.mkdir(exist_ok=True)
 
 bad = set(subjects_to_process) - set(subjects)
 if bad:
-    raise RuntimeError(f"Specified subjects do not exist: {sorted(bad)}")
+    raise RuntimeError(
+        "Specified subjects do not exist:\n"
+        f"\n{sorted(bad)}\nPossibilities:\n"
+        f"{subjects}"
+    )
 
 with open(prep_dir / "misplaced-nasion.yaml") as fid:
     nasion_sub_ses = safe_load(fid)
@@ -169,6 +175,7 @@ for subject in subjects:
         info = mne.io.read_info(raw_fname, verbose=False)
 
         if not scaling_already_done:
+            t0 = time.time()
             # run automated coreg
             coreg = mne.coreg.Coregistration(
                 info, subject=surrogate, subjects_dir=subjects_dir, fiducials=fiducials
@@ -204,6 +211,7 @@ for subject in subjects:
 
             # make BEM solution. We only need 1-layer, but the 6mo surrogate only has
             # 3-layer so let's use that for everyone
+            print("Making BEM solution ...")
             bem_dir = subjects_dir / subject_to / "bem"
             bem_in = bem_dir / f"{subject_to}-5120-5120-5120-bem.fif"
             bem_inout_1 = bem_dir / f"{subject_to}-5120-bem.fif"
@@ -219,6 +227,7 @@ for subject in subjects:
                 f"{bem_surfaces[0]["id"]=} != {mne.io.constants.FIFF.FIFFV_BEM_SURF_ID_BRAIN}"
             solution_1 = mne.make_bem_solution(bem_inout_1)
             mne.write_bem_solution(bem_out_1, solution_1)
+            print(f"Subject complete in {timedelta(seconds=round(time.time() - t0))}")
 
         # QC the coregistrations
         if qc:
