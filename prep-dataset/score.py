@@ -58,7 +58,7 @@ def ensure_events_match(fif_events, tab_events, assoc, require_ids_match=True):
 
 def parse_mmn_events(raw_fname, offset=0):
     """Parse events from STIM channel for MMN experiment (which had wonky timing)."""
-    raw = mne.io.read_raw_fif(raw_fname, allow_maxshield=True, preload=False)
+    raw = mne.io.read_raw_fif(raw_fname, allow_maxshield="yes", preload=False)
     raw.pick("stim").load_data()
     orig_events = mne.find_events(raw, stim_channel="STI101", shortest_event=0)
     stim_idx = np.nonzero(orig_events[:, 2] == 1)[0]
