@@ -113,7 +113,6 @@ read_raw_kw = dict(allow_maxshield="yes", preload=False)
 df = None
 
 # load the list of bad channels ("prebads") that were noted during acquisition
-# TODO: SWITCH TO "prebads.yaml"!
 with open(prep_dir / "prebads.yaml") as fid:
     prebads = yaml.safe_load(fid)
 
