@@ -35,8 +35,14 @@ task: list[str] | str = [_AM_str, _MMN_str]
 subjects: Sequence[str] | Literal["all"] = "all"
 # subjects = safe_load((_pipeline_root / "subs-extra-ecg-proj.yaml").read_text("utf-8"))
 exclude_subjects: Sequence[str] = [
-    '232',  # session b only has `ba` deviant, not `wa` deviant
-    '233',  # session b only has `ba` deviant, not `wa` deviant
+    # No AM:
+    "120",
+    "129",
+    "208",
+    "229",
+    # session b only has `ba` deviant, not `wa` deviant:
+    "232",
+    "233",
 ]
 ch_types: Annotated[Sequence[Literal["meg", "mag", "grad", "eeg"]], Len(1, 4)] = ["meg"]
 data_type: Literal["meg", "eeg"] | None = "meg"
