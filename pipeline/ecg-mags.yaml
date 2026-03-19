@@ -19,7 +19,7 @@ sub-117_ses-b: MEG1541
 sub-118_ses-c: null
 sub-119_ses-a: MEG0141
 sub-119_ses-b: MEG0141
-sub-120_ses-a: null
+sub-120_ses-a: MEG0141
 sub-120_ses-b: MEG0141
 sub-122_ses-a: MEG0111
 sub-122_ses-b: MEG0141
@@ -33,7 +33,7 @@ sub-127_ses-b: MEG0141
 sub-128_ses-a: MEG1541
 sub-128_ses-b: MEG0141
 sub-129_ses-a: MEG0141
-sub-129_ses-b: null
+sub-129_ses-b: MEG0141
 sub-130_ses-a: MEG1421
 sub-130_ses-b: MEG1431
 sub-131_ses-a: MEG0141
@@ -48,7 +48,7 @@ sub-203_ses-c: null
 sub-205_ses-c: null
 sub-206_ses-c: null
 sub-207_ses-c: null
-sub-208_ses-a: null
+sub-208_ses-a: MEG0141
 sub-208_ses-b: MEG0141
 sub-208_ses-c: null
 sub-209_ses-a: MEG1541
@@ -75,7 +75,7 @@ sub-226_ses-a: MEG0141
 sub-226_ses-b: MEG0111
 sub-227_ses-a: MEG0141
 sub-228_ses-a: MEG0111
-sub-229_ses-a: null
+sub-229_ses-a: MEG0113
 sub-229_ses-b: MEG0111
 sub-231_ses-a: MEG0141
 sub-231_ses-b: MEG0141

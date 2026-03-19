@@ -5,7 +5,7 @@ from subprocess import check_call, check_output
 @functools.lru_cache()
 def _get_cp_args():
     output = check_output(["cp", "--version"]).decode("utf-8")
-    ver = float(output.splitlines()[0].split()[-1])
+    ver = float(output.splitlines()[0].split()[-1])  # e.g., 9.8
     if ver < 9:
         return ["--no-clobber"]
     else:
