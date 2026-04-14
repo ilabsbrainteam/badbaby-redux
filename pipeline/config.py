@@ -40,6 +40,14 @@ exclude_subjects: Sequence[str] = [
     "129",
     "208",
     "229",
+    # No MMN:
+    "215",
+    "227",
+    "305",
+    "308",
+    "312",
+    "315",
+    "319",  # TODO: A "two class" bug in time decoding, need to investigate...
     # session b only has `ba` deviant, not `wa` deviant:
     "232",
     "233",
