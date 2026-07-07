@@ -1,6 +1,7 @@
 """Create BIDS folder structure for "badbaby" data."""
 
 import argparse
+from collections import Counter
 from pathlib import Path
 from warnings import filterwarnings
 
@@ -28,6 +29,7 @@ from score import (
 from utils import hardlink, tasks
 
 verify_events_against_tab_files = True
+dry_run = False
 
 mne.set_log_level("WARNING")
 # suppress message about bad filename `*raw2.fif`
@@ -59,20 +61,6 @@ filterwarnings(
     module="mne_bids",
 )
 
-# allow passing a subject or multiple subjects via command line
-parser = argparse.ArgumentParser(
-    description="Create BIDS folder structure for badbaby data",
-)
-parser.add_argument("SUBJECTS", type=str, nargs="*", help="Subject IDs to process")
-args = parser.parse_args()
-subjects_to_process = tuple(args.SUBJECTS)
-for si, subj in enumerate(subjects_to_process):
-    try:
-        int(subj)
-    except ValueError:
-        raise ValueError(f"Subject IDs must be integers, but got {subjects_to_process[si]=}")
-overwrite = bool(subjects_to_process)  # allow overwriting if specific subjects given
-
 # path stuff
 root = Path("/storage/badbaby-redux").resolve()
 orig_data = root / "data"
@@ -82,6 +70,27 @@ mri_dir = root / "anat"
 prep_dir = root / "prep-dataset"
 outdir = prep_dir / "qc"
 outdir.mkdir(exist_ok=True)
+
+# allow passing a subject or multiple subjects via command line
+all_subjects = [
+    data_folder.parts[-2].lstrip("bad_").rstrip("abc")
+    for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/"))
+]
+parser = argparse.ArgumentParser(
+    description="Create BIDS folder structure for badbaby data",
+)
+parser.add_argument("SUBJECTS", type=str, nargs="*", help="Subject IDs to process")
+args = parser.parse_args()
+subjects_to_process = tuple(args.SUBJECTS)
+if len(subjects_to_process) == 1 and subjects_to_process[0].endswith(":"):
+    subjects_to_process = tuple(all_subjects[all_subjects.index(subjects_to_process[0][:-1]):])
+for si, subj in enumerate(subjects_to_process):
+    try:
+        int(subj)
+    except ValueError:
+        raise ValueError(f"Subject IDs must be integers, but got {subjects_to_process[si]=}")
+overwrite = bool(subjects_to_process)  # allow overwriting if specific subjects given
+del all_subjects
 
 with open(root / "metadata" / "daysback.yaml", "r") as fid:
     DAYSBACK = yaml.safe_load(fid)
@@ -123,6 +132,10 @@ with open(prep_dir / "refit-options.yml", "r") as fid:
 # we write MRI data once per subj, but we need a raw file loaded in order to properly
 # write the `trans` information. Use a signal variable to avoid writing more than once.
 last_anat_written = None
+
+if verify_events_against_tab_files:
+    tab_dir = root / "expyfun-logs"
+    assert tab_dir.is_dir(), f"Could not find {tab_dir}"
 
 # classify raw files by "task" from the filenames
 unprocessed = sorted(subjects_to_process)
@@ -244,15 +257,18 @@ for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
                 mne.chpi.refit_hpi(raw.info, **kwargs)
             # write the raw data in the BIDS folder tree
             bids_path.update(task=task_name)
-            write_raw_bids(
-                raw=raw,
-                events=events,
-                event_id=event_mappings[task_code] | generic_events,
-                bids_path=bids_path,
-                empty_room=erm,
-                anonymize=dict(daysback=DAYSBACK),
-                overwrite=True,
-            )
+            event_id = event_mappings[task_code] | generic_events
+            event_id_rev = {v: k for k, v in event_id.items()}
+            if not dry_run:
+                write_raw_bids(
+                    raw=raw,
+                    events=events,
+                    event_id=event_id,
+                    bids_path=bids_path,
+                    empty_room=erm,
+                    anonymize=dict(daysback=DAYSBACK),
+                    overwrite=True,
+                )
             # write the (surrogate) MRI in the BIDS derivatives tree. Since we have
             # separate MRIs for different sessions (they're months apart, and these are
             # infants), we need to rename the subject folder (and some of the files) to
@@ -289,7 +305,7 @@ for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
                             / dirpath.relative_to(mri_dir / full_subj)
                             / fname_out
                         )
-                        hardlink(source=dirpath / fname, target=target, dry_run=False)
+                        hardlink(source=dirpath / fname, target=target, dry_run=dry_run)
                 # now use MNE-BIDS to (re)write the T1, so we can get the side
                 # effect of converting the trans file to a JSON sidecar
                 t1_fname = mri_dir / full_subj / "mri" / "T1.mgz"
@@ -302,38 +318,39 @@ for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
                     fs_subjects_dir=anat_path.parent,
                 )
                 mri_path = BIDSPath(root=bids_root, subject=subj, session=session)
-                nii_file = write_anat(
-                    image=t1_fname,
-                    bids_path=mri_path,
-                    landmarks=landmarks,
-                    overwrite=overwrite,
-                )
-                # make sure our written trans is identical to numerical precision
-                trans_bids = get_head_mri_trans(
-                    bids_path,
-                    t1_bids_path=nii_file,
-                    fs_subject=compound_subj_name,
-                    fs_subjects_dir=anat_path.parent,
-                )
-                assert trans["to"] == trans_bids["to"]
-                assert trans["from"] == trans_bids["from"]
-                np.testing.assert_allclose(
-                    trans["trans"], trans_bids["trans"], atol=1e-6,
-                )
-                # make a copy of the source space using the filename that
-                # MNE-BIDS-Pipeline prefers and the subject_his_id set correctly
-                # (otherwise forward modeling reasonably complains)
-                src_in = anat_path / "bem" / f"{compound_subj_name}-oct-6-src.fif"
-                src_out = anat_path / "bem" / f"{compound_subj_name}-oct6-src.fif"
-                assert src_in.is_file()
-                assert not src_out.is_file()
-                src = mne.read_source_spaces(src_in)
-                for s in src:
-                    s["subject_his_id"] = compound_subj_name
-                mne.write_source_spaces(src_out, src, overwrite=True)
+                if not dry_run:
+                    nii_file = write_anat(
+                        image=t1_fname,
+                        bids_path=mri_path,
+                        landmarks=landmarks,
+                        overwrite=overwrite,
+                    )
+                    # make sure our written trans is identical to numerical precision
+                    trans_bids = get_head_mri_trans(
+                        bids_path,
+                        t1_bids_path=nii_file,
+                        fs_subject=compound_subj_name,
+                        fs_subjects_dir=anat_path.parent,
+                    )
+                    assert trans["to"] == trans_bids["to"]
+                    assert trans["from"] == trans_bids["from"]
+                    np.testing.assert_allclose(
+                        trans["trans"], trans_bids["trans"], atol=1e-6,
+                    )
+                    # make a copy of the source space using the filename that
+                    # MNE-BIDS-Pipeline prefers and the subject_his_id set correctly
+                    # (otherwise forward modeling reasonably complains)
+                    src_in = anat_path / "bem" / f"{compound_subj_name}-oct-6-src.fif"
+                    src_out = anat_path / "bem" / f"{compound_subj_name}-oct6-src.fif"
+                    assert src_in.is_file()
+                    assert not src_out.is_file()
+                    src = mne.read_source_spaces(src_in)
+                    for s in src:
+                        s["subject_his_id"] = compound_subj_name
+                    mne.write_source_spaces(src_out, src, overwrite=True)
 
             # write the bad channels
-            if these_bads:
+            if these_bads and not dry_run:
                 mark_channels(
                     bids_path=bids_path,
                     ch_names=these_bads,
@@ -343,20 +360,32 @@ for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
             if erm_bads:
                 assert erm is not None
                 erm_path = bids_path.find_empty_room(use_sidecar_only=True)
-                mark_channels(
-                    bids_path=erm_path,
-                    ch_names=erm_bads,
-                    status="bad",
-                    descriptions="prebad",
-                )
+                if not dry_run:
+                    mark_channels(
+                        bids_path=erm_path,
+                        ch_names=erm_bads,
+                        status="bad",
+                        descriptions="prebad",
+                    )
             # write the fine-cal and crosstalk files (once per subject/session)
             cal_path = BIDSPath(root=bids_root, subject=subj, session=session)
-            write_meg_calibration(cal_dir / "sss_cal.dat", bids_path=cal_path)
-            write_meg_crosstalk(cal_dir / "ct_sparse.fif", bids_path=cal_path)
+            if not dry_run:
+                write_meg_calibration(cal_dir / "sss_cal.dat", bids_path=cal_path)
+                write_meg_crosstalk(cal_dir / "ct_sparse.fif", bids_path=cal_path)
             # print progress message to terminal
-            print(f"↳ completed with {len(events): >3} events")
+            counted = Counter(event_id_rev[ev] for ev in events[:, 2])
+            if task_code == "am":
+                assert "amtone" in counted
+                assert len(counted) == 1, counted
+            else:
+                assert "standard" in counted
+                assert len(counted) == 3, counted
+                atol = int(min(counted["deviant/wa"], counted["deviant/ba"]) * 0.5)
+                np.testing.assert_allclose(counted["deviant/wa"], counted["deviant/ba"], atol=atol)
+            counts = ", ".join(f"{k}={v}" for k, v in counted.items())
+            print(f"↳ completed with {len(events): >3} events ({counts})")
 if unprocessed:
     raise RuntimeError(f"Some subjects were not processed: {unprocessed}")
 
-if verify_events_against_tab_files and not subjects_to_process:
+if verify_events_against_tab_files and not subjects_to_process and not dry_run:
     df.to_csv(outdir / "log-of-fif-to-tab-matches.csv")
