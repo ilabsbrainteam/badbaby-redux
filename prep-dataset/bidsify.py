@@ -343,7 +343,7 @@ for data_folder in sorted(orig_data.rglob("bad_*/raw_fif/")):
                     src_in = anat_path / "bem" / f"{compound_subj_name}-oct-6-src.fif"
                     src_out = anat_path / "bem" / f"{compound_subj_name}-oct6-src.fif"
                     assert src_in.is_file()
-                    assert not src_out.is_file()
+                    # assert not src_out.is_file()  # we might be overwriting
                     src = mne.read_source_spaces(src_in)
                     for s in src:
                         s["subject_his_id"] = compound_subj_name

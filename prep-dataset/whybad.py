@@ -23,3 +23,16 @@ lost_am = all_subjects.intersection(n_am)
 print(f"Subjects with no AM: {lost_am}")
 print(f"Subjects with no MMN: {all_subjects.intersection(no_mmn)}")
 print(f"Total expected usable subjects: {len(all_subjects - lost_am - no_mmn)}")
+
+# Iterate through all reports and make sure that there are ECGs (the problem with 319a)
+report_dir = Path(__file__).parents[1] / "reports" / "2026-04-20"
+assert report_dir.is_dir(), f"Expected {report_dir} to exist"
+report_paths = sorted(report_dir.rglob("sub-*_ses-*_report.html"))
+# assert len(report_paths) == len(all_subjects) * 2, f"{len(report_paths)=} != {len(all_subjects) * 2=}"
+bad = []
+for report_path in report_paths:
+    report_text = report_path.read_text("utf-8")
+    if "SSP: ECG" not in report_text:
+        bad.append(report_path.parts[-1].split("_report.html")[0])
+if bad:
+    print(f"Subjects with missing ECGs:\n{'\n'.join(bad)}")
