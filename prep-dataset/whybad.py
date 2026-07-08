@@ -27,7 +27,7 @@ print(f"Total expected usable subjects: {len(all_subjects - lost_am - no_mmn)}")
 # Iterate through all reports and make sure that there are ECGs (the problem with 319a)
 report_dir = Path(__file__).parents[1] / "reports" / "2026-04-20"
 assert report_dir.is_dir(), f"Expected {report_dir} to exist"
-report_paths = sorted(report_dir.rglob("sub-*_ses-*_report.html"))
+report_paths = sorted(path for path in report_dir.rglob("sub-*_ses-*_report.html") if "sub-average" not in path.name)
 # assert len(report_paths) == len(all_subjects) * 2, f"{len(report_paths)=} != {len(all_subjects) * 2=}"
 bad = []
 for report_path in report_paths:
