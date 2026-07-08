@@ -31,6 +31,10 @@ if len(sys.argv) > 1:
         "expected either 0 or 3 command-line arguments (subj, session, task)"
         f" got {sys.argv[1:]}"
     )
+    sub, ses, task = sys.argv[1:]
+    assert re.match(r"sub-\d{3}", sub), f"expected sub-### got {sub=}"
+    assert re.match(r"ses-[abc]", ses), f"expected ses-[abc] got {ses=}"
+    assert task in tasks_with_erm.values(), f"expected task in {list(tasks_with_erm.values())} got {task=}"
     auto_skip = True
 
 hostname = socket.gethostname()

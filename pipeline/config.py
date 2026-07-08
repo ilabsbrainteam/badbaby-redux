@@ -47,10 +47,6 @@ exclude_subjects: Sequence[str] = [
     "308",
     "312",
     "315",
-    "319",  # TODO: A "two class" bug in time decoding, need to investigate...
-    # session b only has `ba` deviant, not `wa` deviant:
-    "232",
-    "233",
 ]
 ch_types: Annotated[Sequence[Literal["meg", "mag", "grad", "eeg"]], Len(1, 4)] = ["meg"]
 data_type: Literal["meg", "eeg"] | None = "meg"

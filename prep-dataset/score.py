@@ -81,7 +81,7 @@ def parse_mmn_events(raw_fname, offset=0):
         trial_ids.append(trial_id)
     trial_ids = np.array(trial_ids)
     # correct mysterious 0 ID that should have been a 4
-    if set(trial_ids) == {2, 3, 0}:
+    if set(trial_ids) in ({2, 3, 0}, {2, 3, 0, -1}):
         trial_ids[np.nonzero(trial_ids == 0)] = 4
     # construct final events array
     trial_ids[np.nonzero(trial_ids == -1)] = 0
@@ -143,6 +143,7 @@ def custom_extract_expyfun_events(fname, offset=0):
 
     these_events = events[aud_idx]
     these_events[:, 2] = np.array(event_nums)
+
     # XXX ADDED ↓↓↓
     bad_cabling = (
         "bad_305a_am_raw.fif",
@@ -150,6 +151,16 @@ def custom_extract_expyfun_events(fname, offset=0):
     if fname.name in bad_cabling:
         these_events[:, 2] += 2
     # XXX ADDED ↑↑↑
+
+    # To cross-check:
+    # import mnefun
+    # assert "_am_" in fname.name
+    # new_events = mnefun.extract_expyfun_events(fname)[0]
+    # if fname.name in bad_cabling:
+    #     new_events[:, 2] += 2
+    # new_events[:, 2] = [{3: 102}[ev] for ev in new_events[:, 2]]
+    # np.testing.assert_array_equal(these_events, new_events)
+
     # return these_events, resps, orig_events  # XXX CHANGED
     return these_events, orig_events
 
@@ -160,7 +171,14 @@ def find_matching_tabs(events, subj, session, exp_type, meas_date, logfile):
     # events from FIF (as parsed by `extract_expyfun_events`)
     fif_events = events[:, -1]
     # make sure subject and date matches in filename
-    candidate_tabs = sorted(tab_dir.glob(f"{subj}_{meas_date.date()}*.tab"))
+    key = (subj, session, exp_type)
+    if key[:2] == ('233', 'b'):
+        # this is an error in the naming
+        glob_subj = '223'
+    else:
+        glob_subj = subj
+    glob_pattern = f"{glob_subj}_{meas_date.date()}*.tab"
+    candidate_tabs = sorted(tab_dir.glob(glob_pattern))
     # get the unique events from FIF
     fif_ev_uniq, fif_ev_counts = np.unique(fif_events, return_counts=True)
     fif_ev_idx = np.argsort(fif_ev_counts)
@@ -188,9 +206,13 @@ def find_matching_tabs(events, subj, session, exp_type, meas_date, logfile):
             assoc=pd.Series([pd.NA], dtype=pd.Float64Dtype()),
         )
     )
-    # if no TAB files found, still log something
+    # if no TAB files found, raise an error
     if not len(candidate_tabs):
-        return row_with_na
+        raise RuntimeError(
+            f"Could not find any TAB files for {key!r}, fix or add an exception to "
+            f"allowed_no_tab. Candidate TAB files found for {glob_pattern}: "
+            f"{[tab.name for tab in candidate_tabs]}"
+        )
     # find the correct .tab file
     tab_exp_types = list()
     for tab in candidate_tabs:
@@ -208,7 +230,7 @@ def find_matching_tabs(events, subj, session, exp_type, meas_date, logfile):
         tab_exp_types.append(tab_exp_type)
         if match[tab_exp_type] != exp_type:
             continue
-        assert metadata["participant"] == subj
+        assert metadata["participant"] == glob_subj
         # find the timestamp diff between TAB file metadata and FIF `meas_date`
         pattern = "%Y-%m-%d %H_%M_%S"
         if "." in metadata["date"]:
@@ -251,6 +273,7 @@ def find_matching_tabs(events, subj, session, exp_type, meas_date, logfile):
         if exp_type == "mmn" and fif_events.size == tab_events.size - 1:
             tab_events = tab_events[1:]
         # offsets disambiguate the 3 experiments. Helpful but not strictly necessary
+        tab_events = np.require(tab_events, requirements="W")  # ensure writeable copy
         tab_events += EVENT_OFFSETS[exp_type]
         # get the unique events from TAB file
         tab_ev_uniq, tab_ev_counts = np.unique(tab_events, return_counts=True)
