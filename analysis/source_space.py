@@ -24,16 +24,16 @@ Done:
 - Compute and plot measure:
   - (S-M)/sqrt(S*M) (S=STG/AAC, M=Motor/PMC)
 - output CSV of windowed means
+- 233 event counts fixed
+- Look into trial count differences: some subjects by chance
 
 TODO:
 - Trial count equalize across sessions, too
-- Look into trial count differences (why so few wa trials?)
 - Use epochs baseline cov
 - Instead of vector, try using mean_flip (and make sure they're oriented the same way)
 - Morph annotation to subject and compute label op instead of using a morph to fsaverage
 - Different loose value?
 - Look into incomplete subjects (bad_subjects below)
-- Look into Alexis event counts: 232 and 233 there are no counts for deviant wa at 6mo, 232 only AM at 2mo
 """
 import json
 import sys
@@ -73,8 +73,8 @@ label_names = tuple(
 sfreq = config.raw_resample_sfreq / config.epochs_decim
 assert sfreq == 200.
 times = np.arange(int(round((tmax - tmin) * sfreq)) + 1) / sfreq + tmin
-# method = "dSPM"
 method =  "dSPM"
+# method = "eLORETA"
 # trial_count_eq = "eq-std-am-only"
 trial_count_eq = True
 plot_tasks = "combined"
@@ -114,20 +114,20 @@ bad_subjects = (
     "sub-228",
     "sub-302",
     "sub-307",
-    "sub-316",
     # missing ses-a
     "sub-317",
-    "sub-318",
-    "sub-320",
     # no counts for deviant wa at 6mo, but also not rsync'ed
-    # "sub-232",
-    # "sub-233",
+    # "sub-232",  # no AM
 )
+expected_subjects = [
+    f"sub-{s}" for s in "116 117 119 122 124 127 128 130 131 133 134 209 211 220 223 224 225 226 231 233 301 304 309 310 311 314 316 318 319 320".split()
+]
 subjects = sorted(path.name for path in data_path.glob("sub-*"))
 for bad_subject in bad_subjects:
     subjects.pop(subjects.index(bad_subject))
 subjects = tuple(subjects)
-assert len(subjects) == 38 - len(bad_subjects), len(subjects)
+assert set(subjects) == set(expected_subjects), set(subjects).symmetric_difference(set(expected_subjects))
+assert len(subjects) == 30, len(subjects)
 print(f"Using {len(subjects)=} after excluding {len(bad_subjects)=}")
 subjects_sessions = tuple(
     (subject, session)
@@ -160,8 +160,17 @@ for ssi, (subject, session) in enumerate(tqdm(
     all_epochs = list()
     for task in tasks:
         epochs_path = deriv_root / f"{subj_sess}_task-{task}_proc-clean_epo.fif"
-        all_epochs.append(mne.read_epochs(epochs_path, preload=True))
-        all_epochs[-1].crop(tmin=None, tmax=tmax)
+        these_epochs = mne.read_epochs(epochs_path, preload=True)
+        these_epochs.crop(tmin=None, tmax=tmax)
+        assert "amtone" == tasks[0].lower()
+        if task == tasks[0]:
+            # Need to re-number it so there are not colissions
+            assert np.allclose(these_epochs.events[:, 2], 1)
+            key = list(these_epochs.event_id)[0]
+            assert len(these_epochs.event_id) == 1, these_epochs.event_id
+            these_epochs.events[:, 2] = 1001
+            these_epochs.event_id[key] = 1001
+        all_epochs.append(these_epochs)
     epochs = mne.concatenate_epochs(  # ignore dropped annots
         all_epochs, verbose="error",
     )
@@ -170,7 +179,8 @@ for ssi, (subject, session) in enumerate(tqdm(
             eq_conditions = [cond for cond in all_conditions if cond != "deviant"]
         else:
             assert trial_count_eq == "eq-std-am-only"
-            epochs.equalize_event_counts(["standard", "amtone"])
+            eq_conditions = ["standard", "amtone"]
+        epochs.equalize_event_counts(eq_conditions)
     assert np.allclose(times, epochs.times)
     del all_epochs
     inv = mne.minimum_norm.make_inverse_operator(
@@ -205,7 +215,7 @@ for ssi, (subject, session) in enumerate(tqdm(
             # Need to create it differently
             these_epochs = epochs[["deviant", "standard"]]
             want_num = len(these_epochs["standard"])
-            to_drop = np.where(epochs.events[:, 2] == epochs.event_id["standard"])[0][::2]
+            to_drop = np.where(these_epochs.events[:, 2] == these_epochs.event_id["standard"])[0][::2]
             these_epochs.drop(to_drop)
             these_epochs.equalize_event_counts(["deviant/wa", "deviant/ba", "standard"])
             these_epochs = these_epochs["deviant"]
@@ -215,6 +225,10 @@ for ssi, (subject, session) in enumerate(tqdm(
             these_epochs = epochs[condition]
         assert len(these_epochs) > 10, len(these_epochs)
         ave = these_epochs.average()
+        if condition == "deviant" and trial_count_eq is True:
+            pass
+        else:
+            assert ave.comment == condition, ave.comment
         label_data_out["nave"][ci] = ave.nave
         label_data_out["data"][ci] = label_op @ ave.data
     h5io.write_hdf5(label_path, label_data_out)

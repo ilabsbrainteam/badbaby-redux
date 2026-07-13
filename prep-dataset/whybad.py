@@ -3,7 +3,7 @@
 from pathlib import Path
 
 known_bads = {}
-n_am = set("120 129 208 229".split())
+n_am = set("120 129 208 229 232".split())
 no_mmn = set("215 227 305 308 312 315".split())
 
 root = Path("/storage/badbaby-redux").resolve()
@@ -22,7 +22,7 @@ assert no_mmn.isdisjoint(n_am), "Some subjects are in both AM and MMN bad lists"
 lost_am = all_subjects.intersection(n_am)
 print(f"Subjects with no AM: {lost_am}")
 print(f"Subjects with no MMN: {all_subjects.intersection(no_mmn)}")
-print(f"Total expected usable subjects: {len(all_subjects - lost_am - no_mmn)}")
+print(f"Total expected usable subjects: {len(all_subjects - lost_am - no_mmn)}:\n{sorted(all_subjects - lost_am - no_mmn)}")
 
 # Iterate through all reports and make sure that there are ECGs (the problem with 319a)
 report_dir = Path(__file__).parents[1] / "reports" / "2026-04-20"

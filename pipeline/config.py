@@ -40,6 +40,7 @@ exclude_subjects: Sequence[str] = [
     "129",
     "208",
     "229",
+    "232",
     # No MMN:
     "215",
     "227",
