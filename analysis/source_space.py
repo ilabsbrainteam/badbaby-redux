@@ -9,6 +9,12 @@
 |    -rh |        |            |        |            |
 | AAC-lh |        |            |        |            |
 |    -rh |        |            |        |            |
+| TPJ-lh |        |            |        |            |
+|    -rh |        |            |        |            |
+| IPC-lh |        |            |        |            |
+|    -rh |        |            |        |            |
+| ACC-lh |        |            |        |            |
+|    -rh |        |            |        |            |
 
 Done:
 - Make sure all files are present
@@ -17,6 +23,7 @@ Done:
 - Create plots:
   - 2 ages: 2mo, 6mo
   - 3 ROIs (Glasser 2016): Precentral gyrus (PCG), Inferior frontal gyrus (IFG), auditory (STG)
+  - 3 more ROIs: TPJ, inferior parietal (IPC), anterior cingulate (ACC, incl. mPFC)
   - 4 traces: standard, deviant/ba, deviant (ba+wa), am
   - Time windows: 2mo=(200-375), 6mo=(150-250)
 - Did trial count EQ within session
@@ -59,15 +66,18 @@ assert len(sessions) == 2, sessions
 tmax = min(config.epochs_tmax.values())  # could use (-0.1, 0.7) for equiv with orig
 tmin = config.epochs_tmin
 assert tmin == -0.2, tmin
-rois = (
-    "Premotor Cortex",  # Precentral gyrus
-    "Inferior Frontal Cortex",  # Inferior frontal gyrus
-    "Auditory Association Cortex",  # Superior temporal gyrus
-)
+label_short_names = {  # short name: HCPMMP1_combined name
+    "PMC": "Premotor Cortex",  # Precentral gyrus
+    "IFG": "Inferior Frontal Cortex",  # Inferior frontal gyrus
+    "STG": "Auditory Association Cortex",  # Superior temporal gyrus
+    "TPJ": "Temporo-Parieto-Occipital Junction",  # TPOJ1-3, STV, PSL
+    "IPC": "Inferior Parietal Cortex",  # PF*, PG*, IP0-2
+    "ACC": "Anterior Cingulate and Medial Prefrontal Cortex",  # includes mPFC
+}
 hemis = ("lh", "rh")
 label_names = tuple(
     f"{name}-{hemi}"
-    for name in rois
+    for name in label_short_names.values()
     for hemi in hemis
 )
 sfreq = config.raw_resample_sfreq / config.epochs_decim
@@ -79,7 +89,7 @@ method =  "dSPM"
 trial_count_eq = True
 plot_tasks = "combined"
 # plot_tasks = "separate"
-del rois, config
+del config
 
 # Paths
 this_dir = Path(__file__).parent
@@ -147,7 +157,9 @@ for ssi, (subject, session) in enumerate(tqdm(
     subj_sess = f"{subject}_{session}"
     label_path = label_dir / f"{subj_sess}_label_data_{extra}.h5"
     if label_path.is_file():
-        continue
+        if h5io.read_hdf5(label_path)["label_names"] == label_names:
+            continue
+        tqdm.write(f"Regenerating {label_path.name} (ROIs changed)")
     deriv_root = data_path / f"{subject}" / f"{session}" / "meg"
     del subject, session
     cov_path = deriv_root / f"{subj_sess}_task-noise_proc-clean_cov.fif"
@@ -231,7 +243,7 @@ for ssi, (subject, session) in enumerate(tqdm(
             assert ave.comment == condition, ave.comment
         label_data_out["nave"][ci] = ave.nave
         label_data_out["data"][ci] = label_op @ ave.data
-    h5io.write_hdf5(label_path, label_data_out)
+    h5io.write_hdf5(label_path, label_data_out, overwrite=True)
 
 # Load all data
 all_data = np.zeros(
@@ -341,14 +353,11 @@ for sti, (session, task) in enumerate(sessions_tasks):
             ax.set_title(f"{session_titles[session]}\n{task_titles[task]}")
             ax.legend(loc="upper right", fontsize="xx-small")
         if sps.is_first_col():
-            ylabel = label_name.replace("-", " ")
-            ylabel_parts = ylabel.split()
-            assert ylabel_parts[-2] == "Cortex"  # for now at least
-            assert ylabel_parts[-1] in hemis
-            ylabel_parts = ylabel_parts[:-2]+ [ylabel_parts[-1].upper()]
-            if ylabel_parts[-1] == "RH":  # Second one
-                ylabel_parts = [""] * (len(ylabel_parts) - 1) + ylabel_parts[-1:]
-            ax.set_ylabel("\n".join(ylabel_parts))
+            short_name = list(label_short_names)[li // len(hemis)]
+            hemi = hemis[li % len(hemis)]
+            assert label_name == f"{label_short_names[short_name]}-{hemi}"
+            # Only put the ROI name on the first hemi row
+            ax.set_ylabel(f"{short_name if hemi == hemis[0] else ''}\n{hemi.upper()}")
         if sps.is_last_row():
             ax.set_xlabel("Time (s)")
         ax.set_xlim(times[0], times[-1])
@@ -364,27 +373,42 @@ else:
 fig.suptitle(title)
 fig.savefig(this_dir / f"source_space_{plot_extra}.png", dpi=300)
 
-# extract values of interest first
-label_short_names = {
-    "STG": "Auditory Association Cortex",
-    "PMC": "Premotor Cortex",
-    "IFG": "Inferior Frontal Cortex",
-}
-
-# aggregate scatter data
-scatter_data = np.zeros((len(subjects), len(sessions), len(all_conditions), len(labels)))
-for si, session in enumerate(sessions):
-    time_mask = (times >= regions[session][0]) & (times <= regions[session][1])
-    session_idx = sessions.index(session)
-    this_data = all_data[:, session_idx, :, :, :, :][..., time_mask]
-    scatter_data[:, session_idx] = np.linalg.norm(this_data, axis=-2).mean(axis=-1)
+# aggregate windowed means
+# "early" is the session-dependent window shaded in the figure, the rest are
+# fixed windows (same for both sessions)
+csv_windows = {"early": regions}
+for start, stop in (
+    (0.325, 0.525), (0.3, 0.45), (0.45, 0.6), (0.55, 0.7), (0.35, 0.5),
+):
+    name = f"{start * 1000:0.0f}-{stop * 1000:0.0f}ms"
+    csv_windows[name] = {session: (start, stop) for session in sessions}
+window_data = dict()
+for window, window_regions in csv_windows.items():
+    window_data[window] = np.zeros(
+        (len(subjects), len(sessions), len(all_conditions), len(labels))
+    )
+    for session_idx, session in enumerate(sessions):
+        start, stop = window_regions[session]
+        assert times[0] <= start < stop <= times[-1], (start, stop)
+        time_mask = (times >= start) & (times <= stop)
+        this_data = all_data[:, session_idx, :, :, :, :][..., time_mask]
+        window_data[window][:, session_idx] = np.linalg.norm(
+            this_data, axis=-2
+        ).mean(axis=-1)
+scatter_data = window_data["early"]  # used for the ratio plots below
 # Output CSV: subjects in rows with everything else in columns
-csv_lines = ["subject,session,condition,label,value"]
+csv_lines = ["subject,session,condition,label,window,tmin,tmax,value"]
 for si, subject in enumerate(subjects):
     for ei, session in enumerate(sessions):
         for ci, condition in enumerate(all_conditions):
             for li, label_name in enumerate(label_names):
-                csv_lines.append(f"{subject},{session},{condition},{label_name},{scatter_data[si, ei, ci, li]:.6e}")
+                for window, window_regions in csv_windows.items():
+                    start, stop = window_regions[session]
+                    value = window_data[window][si, ei, ci, li]
+                    csv_lines.append(
+                        f"{subject},{session},{condition},{label_name},"
+                        f"{window},{start:0.3f},{stop:0.3f},{value:.6e}"
+                    )
 csv_path = this_dir / f"source_space_{plot_extra}.csv"
 csv_path.write_text("\n".join(csv_lines), encoding="utf-8")
 
